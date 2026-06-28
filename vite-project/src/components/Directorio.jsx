@@ -1,22 +1,28 @@
 import { useState } from 'react'
 import { useAuth } from '../context/AuthContext'
-import { cultoresIniciales } from '../data/mockData'
+import { cultoresIniciales, categorias } from '../data/mockData'
 import { useReveal } from '../hooks/useReveal'
 
 function Directorio({ onSelectCultor }) {
   const { user } = useAuth()
   const { ref, isVisible } = useReveal(0)
   const [searchTerm, setSearchTerm] = useState('')
+  const [filtroCategoria, setFiltroCategoria] = useState('Todas')
 
-  // Filtrar cultores en base a la búsqueda
+  // Filtrar cultores combinando texto de búsqueda Y categoría/oficio seleccionada
   const cultoresFiltrados = cultoresIniciales.filter((cultor) => {
     const term = searchTerm.toLowerCase()
-    return (
+    const coincideTexto =
       cultor.nombres.toLowerCase().includes(term) ||
       cultor.apellidos.toLowerCase().includes(term) ||
       cultor.oficio.toLowerCase().includes(term) ||
       cultor.municipio.toLowerCase().includes(term)
-    )
+
+    const coincideCategoria =
+      filtroCategoria === 'Todas' ||
+      cultor.oficio.toLowerCase().includes(filtroCategoria.toLowerCase())
+
+    return coincideTexto && coincideCategoria
   })
 
   // Solo mostrar si el usuario está logueado
@@ -54,6 +60,24 @@ function Directorio({ onSelectCultor }) {
               onChange={(e) => setSearchTerm(e.target.value)}
               className="w-full h-full bg-transparent border-none text-cafe-noir placeholder-cafe-noir/40 font-sans focus:outline-none pr-6"
             />
+          </div>
+
+          {/* Píldoras de filtro por categoría/oficio (rescatadas de la antigua Colección de obras) */}
+          <div className="mt-6 flex flex-wrap justify-center gap-3">
+            {categorias.map((categoria) => (
+              <button
+                key={categoria}
+                type="button"
+                onClick={() => setFiltroCategoria(categoria)}
+                className={`rounded-full px-5 py-2 font-sans text-xs uppercase tracking-[0.15em] transition-all ${
+                  filtroCategoria === categoria
+                    ? 'bg-cafe-noir text-linen'
+                    : 'border border-cafe-noir/20 bg-transparent text-cafe-noir hover:border-cafe-noir/40'
+                }`}
+              >
+                {categoria}
+              </button>
+            ))}
           </div>
         </div>
 

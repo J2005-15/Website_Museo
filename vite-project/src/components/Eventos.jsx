@@ -17,7 +17,7 @@ function Eventos() {
       ref={ref}
       className="relative scroll-mt-20 overflow-hidden bg-linen py-16 lg:py-20"
     >
-      {/* Fundido desde la sección anterior (Galería) */}
+      {/* Fundido desde la sección anterior (Nosotros) */}
       <div className="pointer-events-none absolute top-0 w-full h-[32rem] bg-gradient-to-b from-gallery-cream via-gallery-cream/60 to-gallery-cream/0" />
 
       <div className={`relative mx-auto max-w-6xl px-6 transition-all duration-1000 ease-out transform ${isVisible ? 'translate-y-0 opacity-100' : 'translate-y-12 opacity-0'}`}>

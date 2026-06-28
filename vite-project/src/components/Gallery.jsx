@@ -4,7 +4,7 @@ import { categorias, obrasIniciales } from '../data/mockData'
 import { useAuth } from '../context/AuthContext'
 import ObraCard from './ObraCard'
 
-function Gallery({ onOpenUpload }) {
+function Gallery() {
   const [obras] = useState(obrasIniciales)
   const [filtro, setFiltro] = useState('Todas')
   const { ref, isVisible } = useReveal(0.2)
@@ -15,12 +15,18 @@ function Gallery({ onOpenUpload }) {
     return obras.filter((obra) => obra.categoria === filtro)
   }, [obras, filtro])
 
+  // La colección pública solo es para visitantes; un cultor con sesión activa
+  // ya gestiona sus obras desde su panel, no desde esta sección.
+  if (user) return null
+
   return (
     <section
       id="galeria"
       ref={ref}
       className="relative scroll-mt-20 overflow-hidden bg-gallery-cream py-28"
     >
+      <div className="pointer-events-none absolute top-0 w-full h-[12rem] bg-gradient-to-b from-linen via-linen/60 to-linen/0" />
+
       <div className={`relative mx-auto max-w-5xl px-6 transition-all duration-1000 ease-out transform ${isVisible ? 'translate-y-0 opacity-100' : 'translate-y-12 opacity-0'}`}>
         <div className="text-center">
           <span className="font-sans text-xs uppercase tracking-[0.25em] text-tertiary">
@@ -54,20 +60,6 @@ function Gallery({ onOpenUpload }) {
             </button>
           ))}
         </div>
-
-        {user && (
-          <div className="mt-8 flex justify-center">
-            <button
-              onClick={onOpenUpload}
-              className="group inline-flex items-center gap-2 rounded-full bg-tertiary px-6 py-2.5 font-sans text-xs font-semibold uppercase tracking-widest text-linen shadow-md transition-all hover:scale-105 hover:bg-tertiary/80"
-            >
-              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
-              </svg>
-              Subir nueva obra
-            </button>
-          </div>
-        )}
 
         {/* Galería tipo masonry */}
         <div className="mt-16 columns-1 gap-8 sm:columns-2 lg:columns-3">

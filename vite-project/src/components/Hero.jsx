@@ -41,7 +41,7 @@ function Hero({ onOpenRegister }) {
 
         <div className="mt-10 flex flex-wrap justify-center gap-4">
           <a
-            href="#galeria"
+            href="#eventos"
             className="group inline-flex items-center gap-2 rounded-full bg-tertiary px-7 py-3 font-sans text-sm font-semibold uppercase tracking-wider text-linen shadow-lg shadow-cafe-noir/40 transition-all hover:scale-105 hover:bg-tertiary/80 hover:shadow-xl"
           >
             Explorar Colección

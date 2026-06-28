@@ -1,31 +1,34 @@
 import { createContext, useState, useContext } from 'react'
+import { loginRequest } from '../services/api'
 
 const AuthContext = createContext()
+const STORAGE_KEY = 'cultor_sesion'
 
 export function AuthProvider({ children }) {
-  // Estado para simular si hay un usuario logueado o no.
+  // Sesión real persistida (id, nombres/apellidos del Usuario, correo y el JWT).
+  // Los datos completos del cultor (cédula, parroquia, etc.) se piden aparte vía
+  // GET /api/cultores/perfil, no viven aquí.
   const [user, setUser] = useState(() => {
-    const savedUser = localStorage.getItem('museo_simulated_user')
+    const savedUser = localStorage.getItem(STORAGE_KEY)
     return savedUser ? JSON.parse(savedUser) : null
   })
 
-  // Función para simular el inicio de sesión
-  const login = () => {
-    const mockUser = {
-      id: 1,
-      nombres: 'María José',
-      apellidos: 'Useche Rangel',
-      oficio: 'Cestería',
-      role: 'CULTOR_APROBADO'
+  const login = async (correo, password) => {
+    const data = await loginRequest(correo, password)
+    const sesion = {
+      id: data.user.id_usuario,
+      nombres: data.user.primer_nombre,
+      apellidos: data.user.primer_apellido,
+      correo: data.user.correo,
+      token: data.token,
     }
-    setUser(mockUser)
-    localStorage.setItem('museo_simulated_user', JSON.stringify(mockUser))
+    setUser(sesion)
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(sesion))
   }
 
-  // Función para cerrar sesión
   const logout = () => {
     setUser(null)
-    localStorage.removeItem('museo_simulated_user')
+    localStorage.removeItem(STORAGE_KEY)
   }
 
   return (

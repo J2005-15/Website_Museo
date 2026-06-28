@@ -76,6 +76,7 @@ export const obrasIniciales = [
     autor: 'Ramón Antonio Contreras Pérez',
     ubicacion: 'Capacho, Táchira',
     imagenUrl: tinajaImg,
+    estado: 'Aprobada',
   },
   {
     id: 2,
@@ -84,6 +85,7 @@ export const obrasIniciales = [
     autor: 'María José Useche Rangel',
     ubicacion: 'Ureña, Táchira',
     imagenUrl: cesteria2Img,
+    estado: 'Aprobada',
   },
   {
     id: 3,
@@ -92,6 +94,7 @@ export const obrasIniciales = [
     autor: 'José Antonio Mora',
     ubicacion: 'Lobatera, Táchira',
     imagenUrl: mascaraImg,
+    estado: 'Aprobada',
   },
   {
     id: 4,
@@ -100,6 +103,7 @@ export const obrasIniciales = [
     autor: 'Carmen Rosa Duque',
     ubicacion: 'Pregonero, Táchira',
     imagenUrl: lienzoImg,
+    estado: 'Aprobada',
   },
   {
     id: 5,
@@ -108,6 +112,7 @@ export const obrasIniciales = [
     autor: 'Isabel Rangel',
     ubicacion: 'Queniquea, Táchira',
     imagenUrl: ruanaImg,
+    estado: 'Aprobada',
   },
   {
     id: 6,
@@ -116,6 +121,25 @@ export const obrasIniciales = [
     autor: 'Pedro Vivas',
     ubicacion: 'Independencia, Táchira',
     imagenUrl: jarronImg,
+    estado: 'Aprobada',
+  },
+  {
+    id: 7,
+    titulo: 'Canasta Tradicional',
+    categoria: 'Cestería',
+    autor: 'María José Useche Rangel',
+    ubicacion: 'Ureña, Táchira',
+    imagenUrl: null,
+    estado: 'Pendiente',
+  },
+  {
+    id: 8,
+    titulo: 'Tejido de palma',
+    categoria: 'Textiles',
+    autor: 'María José Useche Rangel',
+    ubicacion: 'Ureña, Táchira',
+    imagenUrl: null,
+    estado: 'Rechazada',
   },
 ]
 

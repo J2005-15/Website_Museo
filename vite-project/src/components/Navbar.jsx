@@ -1,65 +1,147 @@
 import { useState, useRef, useEffect } from 'react'
 import { useAuth } from '../context/AuthContext'
-import { notificacionesMock } from '../data/mockData'
+import { getNotificacionesRequest, marcarNotificacionesLeidasRequest } from '../services/api'
 import logoM from '../assets/LogoM.png'
+
+// Icono y color por `tipo` de notificación (los únicos valores que entrega el backend:
+// info / success / warning), reutilizando los mismos estilos de cápsula que ya existían.
+function iconoNotificacion(tipo) {
+  if (tipo === 'success') {
+    return {
+      clase: 'bg-emerald-100 text-emerald-600 border-emerald-200/50',
+      path: 'M5 13l4 4L19 7',
+      strokeWidth: 2.5,
+    }
+  }
+  if (tipo === 'warning') {
+    return {
+      clase: 'bg-amber-100 text-amber-600 border-amber-200/50',
+      path: 'M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z',
+      strokeWidth: 2,
+    }
+  }
+  // info (o cualquier valor desconocido) cae aquí por defecto
+  return {
+    clase: 'bg-cafe-noir/5 text-cafe-noir/50 border-cafe-noir/10',
+    path: 'M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z',
+    strokeWidth: 2,
+  }
+}
 
 const links = [
   { href: '#inicio', label: 'Inicio' },
   { href: '#nosotros', label: 'Nosotros' },
-  { href: '#galeria', label: 'Galería' },
   { href: '#eventos', label: 'Eventos' },
 ]
 
-function Navbar({ onOpenRegister, onOpenLogin }) {
+function Navbar({ onOpenRegister, onOpenLogin, onOpenPanel }) {
   const [menuAbierto, setMenuAbierto] = useState(false)
   const [notificacionesAbiertas, setNotificacionesAbiertas] = useState(false)
+  const [cuentaAbierta, setCuentaAbierta] = useState(false)
+  const [scrolled, setScrolled] = useState(false)
+  const [notificaciones, setNotificaciones] = useState([])
+  const [marcandoLeidas, setMarcandoLeidas] = useState(false)
   const notificacionesRef = useRef(null)
+  const cuentaRef = useRef(null)
   const { user, logout } = useAuth()
 
-  const cerrarMenu = () => setMenuAbierto(false)
-  const toggleNotificaciones = () => setNotificacionesAbiertas(!notificacionesAbiertas)
+  // Carga las notificaciones reales del cultor en cuanto inicia sesión (y las limpia
+  // al cerrar sesión). No depende de que el dropdown esté abierto: así el contador de
+  // la campanita ya está listo desde que aparece el ícono.
+  useEffect(() => {
+    if (!user) {
+      setNotificaciones([])
+      return
+    }
+    getNotificacionesRequest(user.token)
+      .then(setNotificaciones)
+      .catch(() => setNotificaciones([]))
+  }, [user])
 
-  // Cerrar notificaciones al hacer clic fuera
+  const marcarLeidas = async () => {
+    if (!user || marcandoLeidas) return
+    setMarcandoLeidas(true)
+    try {
+      await marcarNotificacionesLeidasRequest(user.token)
+      setNotificaciones((prev) => prev.map((n) => ({ ...n, leida: true })))
+    } catch {
+      // Si falla, dejamos las notificaciones como estaban — el usuario puede reintentar.
+    } finally {
+      setMarcandoLeidas(false)
+    }
+  }
+
+  const cerrarMenu = () => setMenuAbierto(false)
+
+  // Scroll explícito a la sección, sin depender únicamente del salto nativo de ancla
+  // (que puede fallar si el documento todavía se está re-renderizando justo después del
+  // login). Cierra también el menú móvil si estaba abierto.
+  const irADirectorio = (event) => {
+    event.preventDefault()
+    cerrarMenu()
+    document.getElementById('directorio')?.scrollIntoView({ behavior: 'smooth' })
+  }
+  const toggleNotificaciones = () => setNotificacionesAbiertas(!notificacionesAbiertas)
+  const toggleCuenta = () => setCuentaAbierta(!cuentaAbierta)
+
+  // Cerrar notificaciones y menú de cuenta al hacer clic fuera
   useEffect(() => {
     const handleClickFuera = (event) => {
       if (notificacionesRef.current && !notificacionesRef.current.contains(event.target)) {
         setNotificacionesAbiertas(false)
+      }
+      if (cuentaRef.current && !cuentaRef.current.contains(event.target)) {
+        setCuentaAbierta(false)
       }
     }
     document.addEventListener('mousedown', handleClickFuera)
     return () => document.removeEventListener('mousedown', handleClickFuera)
   }, [])
 
-  const noLeidas = notificacionesMock.filter(n => !n.leida).length
+  // Navbar dinámico: fondo sólido/glassmorphism y texto oscuro al bajar sobre fondos claros
+  useEffect(() => {
+    const handleScroll = () => setScrolled(window.scrollY > 50)
+    window.addEventListener('scroll', handleScroll)
+    handleScroll()
+    return () => window.removeEventListener('scroll', handleScroll)
+  }, [])
+
+  const noLeidas = notificaciones.filter(n => !n.leida).length
+
+  // Clases que cambian según el scroll, manteniendo el contraste siempre legible
+  const textoBase = scrolled ? 'text-cafe-noir' : 'text-linen [text-shadow:0_1px_8px_rgba(41,24,4,0.7)]'
+  const textoBaseHover = scrolled ? 'hover:text-tertiary' : 'hover:text-warm-sand'
 
   return (
-    <header className="fixed top-0 z-50 w-full bg-linen/5 backdrop-blur-md">
+    <header className={`fixed top-0 z-50 w-full transition-all duration-300 ${scrolled ? 'bg-linen/95 backdrop-blur-xl shadow-sm shadow-cafe-noir/10' : 'bg-linen/5 backdrop-blur-md'}`}>
       <nav className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3 sm:px-6">
         <a href="#inicio" className="flex items-center gap-3" onClick={cerrarMenu}>
           <img src={logoM} alt="Museo del Táchira" className="h-12 w-auto sm:h-16" />
-          <span className="font-serif text-xl text-linen [text-shadow:0_1px_10px_rgba(41,24,4,0.7)] sm:text-2xl">
+          <span className={`font-serif text-xl sm:text-2xl transition-colors ${scrolled ? 'text-cafe-noir' : 'text-linen [text-shadow:0_1px_10px_rgba(41,24,4,0.7)]'}`}>
             Archivo Táchira
           </span>
         </a>
 
         <ul className="hidden items-center gap-10 md:flex">
-          {links.map((link) => (
-            <li key={link.href}>
-              <a
-                href={link.href}
-                className="font-sans text-xs font-medium uppercase tracking-widest text-linen transition-colors hover:text-warm-sand [text-shadow:0_1px_8px_rgba(41,24,4,0.7)]"
-              >
-                {link.label}
-              </a>
-            </li>
-          ))}
-          {user && (
+          {!user ? (
+            links.map((link) => (
+              <li key={link.href}>
+                <a
+                  href={link.href}
+                  className={`font-sans text-xs font-medium uppercase tracking-widest transition-colors ${textoBase} ${textoBaseHover}`}
+                >
+                  {link.label}
+                </a>
+              </li>
+            ))
+          ) : (
             <li>
               <a
                 href="#directorio"
-                className="font-sans text-xs font-medium uppercase tracking-widest text-warm-sand transition-colors hover:text-white [text-shadow:0_1px_8px_rgba(41,24,4,0.7)]"
+                onClick={irADirectorio}
+                className={`font-sans text-xs font-medium uppercase tracking-widest transition-colors ${scrolled ? 'text-tertiary hover:text-cafe-noir' : 'text-warm-sand hover:text-white [text-shadow:0_1px_8px_rgba(41,24,4,0.7)]'}`}
               >
-                Directorio
+                Directorio de Cultores
               </a>
             </li>
           )}
@@ -70,9 +152,9 @@ function Navbar({ onOpenRegister, onOpenLogin }) {
               <div className="flex items-center gap-4 relative" ref={notificacionesRef}>
                 
                 {/* Botón Campana Notificaciones */}
-                <button 
+                <button
                   onClick={toggleNotificaciones}
-                  className="relative p-2 rounded-full text-linen hover:bg-white/10 transition-colors"
+                  className={`relative p-2 rounded-full transition-colors ${scrolled ? 'text-cafe-noir hover:bg-cafe-noir/5' : 'text-linen hover:bg-white/10'}`}
                 >
                   <svg className="h-6 w-6 drop-shadow-md" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
@@ -89,30 +171,42 @@ function Navbar({ onOpenRegister, onOpenLogin }) {
                   <div className="absolute right-0 top-full mt-4 w-[22rem] lg:w-[24rem] rounded-3xl bg-white/95 backdrop-blur-xl border border-white/50 shadow-[0_10px_40px_-10px_rgba(41,24,4,0.15)] overflow-hidden animate-in slide-in-from-top-2 fade-in duration-200 z-50">
                     <div className="bg-cafe-noir/95 p-5 flex items-center justify-between">
                       <h3 className="font-serif text-xl text-gallery-cream">Notificaciones</h3>
-                      <button className="text-[10px] font-sans font-bold text-gallery-cream/70 hover:text-white uppercase tracking-[0.2em] transition-colors">Marcar leídas</button>
+                      <button
+                        onClick={marcarLeidas}
+                        disabled={marcandoLeidas || noLeidas === 0}
+                        className="text-[10px] font-sans font-bold text-gallery-cream/70 hover:text-white uppercase tracking-[0.2em] transition-colors disabled:opacity-40 disabled:hover:text-gallery-cream/70"
+                      >
+                        Marcar leídas
+                      </button>
                     </div>
                     <div className="max-h-[60vh] overflow-y-auto [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:bg-cafe-noir/10 [&::-webkit-scrollbar-thumb]:rounded-full">
-                      {notificacionesMock.length > 0 ? (
-                        notificacionesMock.map((notif) => (
-                          <div key={notif.id} className={`group relative p-5 border-b border-cafe-noir/5 hover:bg-cafe-noir/[0.02] transition-colors ${!notif.leida ? 'bg-gallery-cream/30' : ''}`}>
-                            {!notif.leida && (
-                              <div className="absolute left-2 top-1/2 -translate-y-1/2 h-1.5 w-1.5 rounded-full bg-red-500 shadow-sm" />
-                            )}
-                            <div className="flex gap-4">
-                              <div className="mt-0.5 flex-shrink-0">
-                                {notif.tipo === 'invitacion' && <span className="flex h-10 w-10 items-center justify-center rounded-full bg-amber-100 text-amber-600 shadow-sm border border-amber-200/50"><svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg></span>}
-                                {notif.tipo === 'aprobado' && <span className="flex h-10 w-10 items-center justify-center rounded-full bg-emerald-100 text-emerald-600 shadow-sm border border-emerald-200/50"><svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7"/></svg></span>}
-                                {notif.tipo === 'pendiente' && <span className="flex h-10 w-10 items-center justify-center rounded-full bg-cafe-noir/5 text-cafe-noir/50 shadow-sm border border-cafe-noir/10"><svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg></span>}
-                                {notif.tipo === 'rechazado' && <span className="flex h-10 w-10 items-center justify-center rounded-full bg-red-100 text-red-600 shadow-sm border border-red-200/50"><svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg></span>}
-                              </div>
-                              <div className="flex-grow">
-                                <p className={`font-sans text-sm ${!notif.leida ? 'font-bold text-cafe-noir' : 'font-semibold text-cafe-noir/90'}`}>{notif.titulo}</p>
-                                <p className="font-sans text-xs text-cafe-noir/70 mt-1.5 leading-relaxed">{notif.mensaje}</p>
-                                <p className="font-sans text-[10px] font-bold text-tertiary/70 uppercase tracking-widest mt-2.5">{notif.tiempo}</p>
+                      {notificaciones.length > 0 ? (
+                        notificaciones.map((notif) => {
+                          const { clase, path, strokeWidth } = iconoNotificacion(notif.tipo)
+                          return (
+                            <div key={notif.id_notificacion} className={`group relative p-5 border-b border-cafe-noir/5 hover:bg-cafe-noir/[0.02] transition-colors ${!notif.leida ? 'bg-gallery-cream/30' : ''}`}>
+                              {!notif.leida && (
+                                <div className="absolute left-2 top-1/2 -translate-y-1/2 h-1.5 w-1.5 rounded-full bg-red-500 shadow-sm" />
+                              )}
+                              <div className="flex gap-4">
+                                <div className="mt-0.5 flex-shrink-0">
+                                  <span className={`flex h-10 w-10 items-center justify-center rounded-full shadow-sm border ${clase}`}>
+                                    <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={strokeWidth} d={path} />
+                                    </svg>
+                                  </span>
+                                </div>
+                                <div className="flex-grow">
+                                  <p className={`font-sans text-sm ${!notif.leida ? 'font-bold text-cafe-noir' : 'font-semibold text-cafe-noir/90'}`}>{notif.titulo}</p>
+                                  <p className="font-sans text-xs text-cafe-noir/70 mt-1.5 leading-relaxed">{notif.mensaje}</p>
+                                  <p className="font-sans text-[10px] font-bold text-tertiary/70 uppercase tracking-widest mt-2.5">
+                                    {new Date(notif.fecha_creacion).toLocaleDateString('es-VE', { day: 'numeric', month: 'short', year: 'numeric' })}
+                                  </p>
+                                </div>
                               </div>
                             </div>
-                          </div>
-                        ))
+                          )
+                        })
                       ) : (
                         <div className="p-10 flex flex-col items-center justify-center text-cafe-noir/40">
                           <svg className="h-8 w-8 mb-3 opacity-50" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/></svg>
@@ -123,27 +217,56 @@ function Navbar({ onOpenRegister, onOpenLogin }) {
                   </div>
                 )}
 
-                {/* Avatar y Botón de Salir */}
-                <div className="flex items-center gap-2 pl-2 border-l border-white/20">
-                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-tertiary text-linen font-bold font-sans shadow-md">
-                    {user.nombres.charAt(0)}
-                  </div>
-                  <span className="font-sans text-sm font-medium text-linen drop-shadow-md">
-                    Hola, {user.nombres}
-                  </span>
+                {/* Menú de Cuenta (dropdown limpio) */}
+                <div className={`relative pl-2 border-l transition-colors ${scrolled ? 'border-cafe-noir/10' : 'border-white/20'}`} ref={cuentaRef}>
+                  <button
+                    onClick={toggleCuenta}
+                    className={`flex items-center gap-2.5 rounded-full pr-3 py-1 transition-colors ${scrolled ? 'hover:bg-cafe-noir/5' : 'hover:bg-white/10'}`}
+                  >
+                    <div className="flex h-8 w-8 items-center justify-center rounded-full bg-tertiary text-linen font-bold font-sans shadow-md">
+                      {user.nombres.charAt(0)}
+                    </div>
+                    <span className={`font-sans text-sm font-medium transition-colors ${scrolled ? 'text-cafe-noir' : 'text-linen drop-shadow-md'}`}>
+                      {user.nombres}
+                    </span>
+                    <svg className={`h-3.5 w-3.5 transition-transform ${scrolled ? 'text-cafe-noir/60' : 'text-linen/80'} ${cuentaAbierta ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </button>
+
+                  {cuentaAbierta && (
+                    <div className="absolute right-0 top-full mt-3 w-56 rounded-2xl bg-white/95 backdrop-blur-xl border border-white/50 shadow-[0_10px_40px_-10px_rgba(41,24,4,0.15)] overflow-hidden z-50">
+                      <div className="px-4 py-3 border-b border-cafe-noir/10">
+                        <p className="font-sans text-xs font-semibold text-cafe-noir">{user.nombres} {user.apellidos}</p>
+                        <p className="font-sans text-[11px] text-cafe-noir/60 mt-0.5">{user.correo}</p>
+                      </div>
+                      <button
+                        onClick={() => { setCuentaAbierta(false); onOpenPanel('perfil') }}
+                        className="block w-full px-4 py-2.5 text-left font-sans text-sm text-cafe-noir hover:bg-cafe-noir/5 transition-colors"
+                      >
+                        Mi Perfil
+                      </button>
+                      <button
+                        onClick={() => { setCuentaAbierta(false); onOpenPanel('obras') }}
+                        className="block w-full px-4 py-2.5 text-left font-sans text-sm text-cafe-noir hover:bg-cafe-noir/5 transition-colors"
+                      >
+                        Mis Obras
+                      </button>
+                      <button
+                        onClick={() => { setCuentaAbierta(false); logout() }}
+                        className="block w-full border-t border-cafe-noir/10 px-4 py-2.5 text-left font-sans text-sm font-medium text-red-600 hover:bg-red-50 transition-colors"
+                      >
+                        Cerrar Sesión
+                      </button>
+                    </div>
+                  )}
                 </div>
-                <button
-                  onClick={logout}
-                  className="rounded-full border border-white/30 bg-transparent px-4 py-1.5 font-sans text-[10px] font-semibold uppercase tracking-wide text-linen backdrop-blur-md transition-colors hover:border-linen hover:bg-white/20 ml-2"
-                >
-                  Salir
-                </button>
               </div>
           ) : (
             <>
               <button
                 onClick={onOpenLogin}
-                className="font-sans text-xs font-semibold uppercase tracking-wide text-linen transition-colors hover:text-warm-sand drop-shadow-md"
+                className={`font-sans text-xs font-semibold uppercase tracking-wide transition-colors ${scrolled ? 'text-cafe-noir hover:text-tertiary' : 'text-linen hover:text-warm-sand drop-shadow-md'}`}
               >
                 Iniciar Sesión
               </button>
@@ -163,7 +286,7 @@ function Navbar({ onOpenRegister, onOpenLogin }) {
           onClick={() => setMenuAbierto((prev) => !prev)}
           aria-label="Abrir menú"
           aria-expanded={menuAbierto}
-          className="flex h-10 w-10 items-center justify-center rounded-full border border-white/30 bg-white/10 text-linen backdrop-blur-md md:hidden"
+          className={`flex h-10 w-10 items-center justify-center rounded-full backdrop-blur-md md:hidden transition-colors ${scrolled ? 'border border-cafe-noir/20 bg-cafe-noir/5 text-cafe-noir' : 'border border-white/30 bg-white/10 text-linen'}`}
         >
           <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.75">
             {menuAbierto ? (
@@ -177,39 +300,40 @@ function Navbar({ onOpenRegister, onOpenLogin }) {
 
       {/* Panel desplegable en móvil: mismo cristal translúcido que el navbar */}
       {menuAbierto && (
-        <div className="border-t border-white/10 bg-linen/5 backdrop-blur-md md:hidden">
+        <div className={`border-t md:hidden transition-colors ${scrolled ? 'border-cafe-noir/10 bg-linen/95 backdrop-blur-xl' : 'border-white/10 bg-linen/5 backdrop-blur-md'}`}>
           <ul className="flex flex-col gap-1 px-4 py-4">
-            {links.map((link) => (
-              <li key={link.href}>
-                <a
-                  href={link.href}
-                  onClick={cerrarMenu}
-                  className="block rounded-lg px-3 py-2.5 font-sans text-sm font-medium uppercase tracking-widest text-linen [text-shadow:0_1px_8px_rgba(41,24,4,0.7)] transition-colors hover:bg-white/15"
-                >
-                  {link.label}
-                </a>
-              </li>
-            ))}
-            {user && (
+            {!user ? (
+              links.map((link) => (
+                <li key={link.href}>
+                  <a
+                    href={link.href}
+                    onClick={cerrarMenu}
+                    className={`block rounded-lg px-3 py-2.5 font-sans text-sm font-medium uppercase tracking-widest transition-colors ${scrolled ? 'text-cafe-noir hover:bg-cafe-noir/5' : 'text-linen [text-shadow:0_1px_8px_rgba(41,24,4,0.7)] hover:bg-white/15'}`}
+                  >
+                    {link.label}
+                  </a>
+                </li>
+              ))
+            ) : (
               <li>
                 <a
                   href="#directorio"
-                  onClick={cerrarMenu}
-                  className="block rounded-lg px-3 py-2.5 font-sans text-sm font-medium uppercase tracking-widest text-warm-sand [text-shadow:0_1px_8px_rgba(41,24,4,0.7)] transition-colors hover:bg-white/15"
+                  onClick={irADirectorio}
+                  className={`block rounded-lg px-3 py-2.5 font-sans text-sm font-medium uppercase tracking-widest transition-colors ${scrolled ? 'text-tertiary hover:bg-cafe-noir/5' : 'text-warm-sand [text-shadow:0_1px_8px_rgba(41,24,4,0.7)] hover:bg-white/15'}`}
                 >
-                  Directorio
+                  Directorio de Cultores
                 </a>
               </li>
             )}
-            
-            <li className="pt-2 border-t border-white/10 mt-2">
+
+            <li className={user ? '' : 'pt-2 border-t border-white/10 mt-2'}>
               {user ? (
                 <div className="px-3 py-2">
                   <div className="flex justify-between items-center mb-4">
-                    <span className="block font-sans text-sm text-linen">Conectado como {user.nombres}</span>
-                    <button 
+                    <span className={`block font-sans text-sm ${scrolled ? 'text-cafe-noir' : 'text-linen'}`}>Conectado como {user.nombres}</span>
+                    <button
                       onClick={toggleNotificaciones}
-                      className="relative p-2 rounded-full text-linen bg-white/10"
+                      className={`relative p-2 rounded-full ${scrolled ? 'text-cafe-noir bg-cafe-noir/5' : 'text-linen bg-white/10'}`}
                     >
                       <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
@@ -224,11 +348,18 @@ function Navbar({ onOpenRegister, onOpenLogin }) {
                     <div className="mb-4 rounded-xl bg-linen border border-white/20 overflow-hidden">
                       <div className="bg-cafe-noir p-3 flex justify-between items-center">
                         <span className="font-serif text-sm text-gallery-cream">Notificaciones</span>
+                        <button
+                          onClick={marcarLeidas}
+                          disabled={marcandoLeidas || noLeidas === 0}
+                          className="text-[9px] font-sans font-bold text-gallery-cream/70 uppercase tracking-[0.2em] disabled:opacity-40"
+                        >
+                          Marcar leídas
+                        </button>
                       </div>
                       <div className="max-h-60 overflow-y-auto">
-                        {notificacionesMock.length > 0 ? (
-                          notificacionesMock.map((notif) => (
-                            <div key={notif.id} className="p-3 border-b border-cafe-noir/5">
+                        {notificaciones.length > 0 ? (
+                          notificaciones.map((notif) => (
+                            <div key={notif.id_notificacion} className={`p-3 border-b border-cafe-noir/5 ${!notif.leida ? 'bg-gallery-cream/30' : ''}`}>
                               <p className="font-sans text-xs font-semibold text-cafe-noir">{notif.titulo}</p>
                               <p className="font-sans text-[10px] text-cafe-noir/70 mt-1 line-clamp-2">{notif.mensaje}</p>
                             </div>
@@ -241,8 +372,20 @@ function Navbar({ onOpenRegister, onOpenLogin }) {
                   )}
 
                   <button
+                    onClick={() => { cerrarMenu(); onOpenPanel('perfil'); }}
+                    className="mb-2 block w-full rounded-full bg-tertiary px-6 py-2.5 text-center font-sans text-xs font-semibold uppercase tracking-wide text-linen shadow-md"
+                  >
+                    Mi Perfil
+                  </button>
+                  <button
+                    onClick={() => { cerrarMenu(); onOpenPanel('obras'); }}
+                    className="mb-2 block w-full rounded-full border border-white/30 px-6 py-2.5 text-center font-sans text-xs font-semibold uppercase tracking-wide text-linen"
+                  >
+                    Mis Obras
+                  </button>
+                  <button
                     onClick={() => { cerrarMenu(); logout(); }}
-                    className="block w-full rounded-full border border-white/30 px-6 py-2.5 text-center font-sans text-xs font-semibold uppercase tracking-wide text-linen"
+                    className="block w-full rounded-full border border-red-300/40 px-6 py-2.5 text-center font-sans text-xs font-semibold uppercase tracking-wide text-red-200"
                   >
                     Cerrar Sesión
                   </button>
