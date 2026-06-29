@@ -1,8 +1,15 @@
 import artisanHandsImg from '../assets/artisan_hands.png'
 import { useReveal } from '../hooks/useReveal'
+import { useConfig } from '../context/ConfigContext'
 
 function About() {
   const { ref, isVisible } = useReveal(0.2)
+  const { configWeb, loadingConfig } = useConfig()
+
+  const defaultAboutText = `El **Archivo Regional de Folklore "Luis Felipe Ramón y Rivera"** fue creado el 21 de junio de 1993 con la firme misión de investigar científicamente y preservar las expresiones de nuestro patrimonio cultural tradicional. Desde sus primeros años, ha trabajado para crear conciencia sobre la necesaria protección de la memoria histórica en todos los municipios del estado.
+
+Tras años de evolución y compromiso con la cultura, el 30 de septiembre de 2008, el Archivo se integró formalmente a las instalaciones del Museo del Táchira. Hoy en día, desde esta sede, continuamos nuestra labor como centro de investigación para recopilar, estudiar y difundir sistemáticamente las manifestaciones, creencias y costumbres que nos definen.`
+
   return (
     <section id="nosotros" ref={ref} className="relative scroll-mt-20 bg-gallery-cream py-20 lg:py-32 overflow-hidden">
       <div className="mx-auto max-w-6xl px-6">
@@ -30,20 +37,15 @@ function About() {
             </h2>
             <div className="mt-8 h-px w-20 bg-primary/40" />
             
-            <div className="mt-8 space-y-4 lg:space-y-5 font-sans text-base lg:text-lg text-cafe-noir/80 leading-relaxed">
-              <p>
-                El <strong className="font-serif text-cafe-noir font-normal">Archivo Regional de Folklore "Luis Felipe Ramón y Rivera"</strong> fue creado el 21 de junio de 1993 con la firme misión de investigar científicamente y preservar las expresiones de nuestro patrimonio cultural tradicional. Desde sus primeros años, ha trabajado para crear conciencia sobre la necesaria protección de la memoria histórica en todos los municipios del estado.
-              </p>
-              <p>
-                Tras años de evolución y compromiso con la cultura, el 30 de septiembre de 2008, el Archivo se integró formalmente a las instalaciones del Museo del Táchira. Hoy en día, desde esta sede, continuamos nuestra labor como centro de investigación para recopilar, estudiar y difundir sistemáticamente las manifestaciones, creencias y costumbres que nos definen.
-              </p>
-              <blockquote className="border-l-2 border-tertiary/30 pl-6 py-2 mt-6">
+            <div className="mt-8 space-y-4 lg:space-y-5 font-sans text-base lg:text-lg text-cafe-noir/80 leading-relaxed whitespace-pre-wrap">
+              {loadingConfig ? defaultAboutText : (configWeb?.about_texto || defaultAboutText)}
+            </div>
+            <blockquote className="border-l-2 border-tertiary/30 pl-6 py-2 mt-6">
                 <p className="font-serif text-lg lg:text-xl italic text-cafe-noir/90 leading-snug">
                   "No solo conservamos el pasado, resguardamos los valores culturales que dan significado a la memoria viva y a la identidad tachirense."
                 </p>
               </blockquote>
             </div>
-          </div>
           
         </div>
       </div>

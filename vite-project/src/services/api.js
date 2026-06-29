@@ -149,3 +149,25 @@ export async function resetPasswordRequest(token, newPassword) {
     throw new Error(errorMsg, { cause: error })
   }
 }
+
+// Obtiene las obras públicas de la colección
+export async function getGaleriaPublicaRequest() {
+  try {
+    const response = await axios.get(`${API_URL}/public-galeria/coleccion`)
+    return response.data
+  } catch (error) {
+    const errorMsg = error.response?.data?.error || error.response?.data?.message || 'Error al obtener la colección'
+    throw new Error(errorMsg, { cause: error })
+  }
+}
+
+// Obtiene la exposición activa y sus obras asociadas
+export async function getExposicionActivaRequest() {
+  try {
+    const response = await axios.get(`${API_URL}/public-galeria/exposicion-activa`)
+    return response.data
+  } catch (error) {
+    const errorMsg = error.response?.data?.error || error.response?.data?.message || 'Error al obtener la exposición activa'
+    throw new Error(errorMsg, { cause: error })
+  }
+}

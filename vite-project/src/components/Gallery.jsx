@@ -1,19 +1,42 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useState, useEffect } from 'react'
 import { useReveal } from '../hooks/useReveal'
-import { categorias, obrasIniciales } from '../data/mockData'
 import { useAuth } from '../context/AuthContext'
 import ObraCard from './ObraCard'
+import { getGaleriaPublicaRequest } from '../services/api'
 
 function Gallery() {
-  const [obras] = useState(obrasIniciales)
+  const [obras, setObras] = useState([])
+  const [categorias, setCategorias] = useState(['Todas'])
   const [filtro, setFiltro] = useState('Todas')
   const { ref, isVisible } = useReveal(0.2)
   const { user } = useAuth()
 
   const obrasFiltradas = useMemo(() => {
     if (filtro === 'Todas') return obras
-    return obras.filter((obra) => obra.categoria === filtro)
+    return obras.filter((obra) => obra.tipo_patrimonio === filtro)
   }, [obras, filtro])
+
+  useEffect(() => {
+    const fetchObras = async () => {
+      try {
+        const data = await getGaleriaPublicaRequest()
+        const obrasMapeadas = data.map(o => ({
+          ...o,
+          id: o.id_obra,
+          categoria: o.tipo_patrimonio || 'N/A',
+          imagenUrl: null, // Asumimos que aún no hay url de imagen guardada
+          autor: o.cultor ? `${o.cultor.nombre} ${o.cultor.apellido}` : 'Cultor Anónimo',
+          ubicacion: o.ubicacion_actual || 'Ubicación no especificada'
+        }))
+        setObras(obrasMapeadas)
+        const cats = new Set(obrasMapeadas.map(o => o.categoria))
+        setCategorias(['Todas', ...Array.from(cats)])
+      } catch (error) {
+        console.error("Error al cargar la galería", error)
+      }
+    }
+    fetchObras()
+  }, [])
 
   // La colección pública solo es para visitantes; un cultor con sesión activa
   // ya gestiona sus obras desde su panel, no desde esta sección.

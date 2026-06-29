@@ -1,5 +1,6 @@
 import cesteriaImg from '../assets/Cesteria.jpeg'
 import { useAuth } from '../context/AuthContext'
+import { useConfig } from '../context/ConfigContext'
 
 const stats = [
   { value: '+120', label: 'Obras digitalizadas' },
@@ -9,6 +10,12 @@ const stats = [
 
 function Hero({ onOpenRegister }) {
   const { user } = useAuth()
+  const { configWeb, loadingConfig } = useConfig()
+
+  // Valores por defecto en caso de que aún esté cargando o falle
+  const defaultTitulo = "Preservando la Memoria\nCultural del Táchira"
+  const defaultSubtitulo = "Un archivo digital colaborativo que rescata el oficio, la mano y la historia de nuestros cultores, conectando a los artesanos del Táchira con quienes valoran su legado."
+
   return (
     <header id="inicio" className="relative flex min-h-screen items-center overflow-hidden">
       {/* Fotografía real: cestería artesanal del Táchira */}
@@ -25,18 +32,14 @@ function Hero({ onOpenRegister }) {
       <div className="relative mx-auto max-w-4xl px-4 py-20 text-center sm:px-6 sm:py-28">
         <div className="mx-auto h-px w-20 bg-warm-sand/60" />
 
-        <h1 className="mt-8 font-serif text-4xl leading-[1.08] text-linen [text-shadow:0_2px_18px_rgba(41,24,4,0.7)] sm:text-5xl md:text-6xl lg:text-7xl">
-          Preservando la Memoria
-          <br />
-          Cultural del Táchira
+        <h1 className="mt-8 font-serif text-4xl leading-[1.08] text-linen [text-shadow:0_2px_18px_rgba(41,24,4,0.7)] sm:text-5xl md:text-6xl lg:text-7xl whitespace-pre-wrap">
+          {loadingConfig ? defaultTitulo : (configWeb?.hero_titulo || defaultTitulo)}
         </h1>
 
         <div className="mx-auto mt-8 h-px w-20 bg-warm-sand/60" />
 
-        <p className="mx-auto mt-8 max-w-2xl font-sans text-base leading-relaxed text-linen/95 [text-shadow:0_1px_10px_rgba(41,24,4,0.6)] sm:text-lg first-letter:text-3xl first-letter:font-serif first-letter:text-warm-sand first-letter:mr-0.5 sm:first-letter:text-4xl">
-          Un archivo digital colaborativo que rescata el oficio, la mano y la
-          historia de nuestros cultores, conectando a los artesanos del
-          Táchira con quienes valoran su legado.
+        <p className="mx-auto mt-8 max-w-2xl font-sans text-base leading-relaxed text-linen/95 [text-shadow:0_1px_10px_rgba(41,24,4,0.6)] sm:text-lg first-letter:text-3xl first-letter:font-serif first-letter:text-warm-sand first-letter:mr-0.5 sm:first-letter:text-4xl whitespace-pre-wrap">
+          {loadingConfig ? defaultSubtitulo : (configWeb?.hero_subtitulo || defaultSubtitulo)}
         </p>
 
         <div className="mt-10 flex flex-wrap justify-center gap-4">

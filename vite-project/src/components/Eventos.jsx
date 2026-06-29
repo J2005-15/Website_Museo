@@ -1,10 +1,42 @@
+import { useState, useEffect } from 'react'
 import { useReveal } from '../hooks/useReveal'
-import { eventosProgramados, obrasIniciales } from '../data/mockData'
 import ObraCard from './ObraCard'
+import { getExposicionActivaRequest } from '../services/api'
 
 function Eventos() {
   const { ref, isVisible } = useReveal(0)
-  const eventoActual = eventosProgramados.find((e) => e.activa)
+  const [eventoActual, setEventoActual] = useState(null)
+  const [obrasEvento, setObrasEvento] = useState([])
+
+  useEffect(() => {
+    const fetchExposicion = async () => {
+      try {
+        const data = await getExposicionActivaRequest()
+        if (data && data.exposicion) {
+          setEventoActual({
+            titulo: data.exposicion.titulo,
+            descripcion: data.exposicion.descripcion,
+            fechaInicio: data.exposicion.fecha_inicio,
+            fechaFin: data.exposicion.fecha_fin
+          })
+          
+          if (data.obras && data.obras.length > 0) {
+            setObrasEvento(data.obras.map(o => ({
+              ...o,
+              id: o.id_obra,
+              categoria: o.tipo_patrimonio || 'N/A',
+              imagenUrl: null,
+              autor: `Cultor #${o.id_cultor}`, // Ajustar si incluye join
+              ubicacion: o.ubicacion_actual || 'Ubicación no especificada'
+            })))
+          }
+        }
+      } catch (error) {
+        console.error("Error fetching exposicion", error)
+      }
+    }
+    fetchExposicion()
+  }, [])
 
   const formatFecha = (fechaString) => {
     const opciones = { year: 'numeric', month: 'long', day: 'numeric' }
@@ -23,7 +55,6 @@ function Eventos() {
       <div className={`relative mx-auto max-w-6xl px-6 transition-all duration-1000 ease-out transform ${isVisible ? 'translate-y-0 opacity-100' : 'translate-y-12 opacity-0'}`}>
         
         {eventoActual ? (() => {
-          const obrasEvento = obrasIniciales.filter(obra => eventoActual.obrasIds.includes(obra.id))
 
           return (
             <div className="flex flex-col items-center">

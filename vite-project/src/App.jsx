@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Routes, Route } from 'react-router-dom'
 import { AuthProvider } from './context/AuthContext'
+import { ConfigProvider } from './context/ConfigContext'
 import Navbar from './components/Navbar'
 import Hero from './components/Hero'
 import About from './components/About'
@@ -58,14 +59,16 @@ function HomePage({ autoOpenLogin = false }) {
 
 function App() {
   return (
-    <AuthProvider>
-      <Routes>
-        <Route path="/" element={<HomePage />} />
-        <Route path="/login" element={<HomePage autoOpenLogin />} />
-        <Route path="/olvide-password" element={<ForgotPassword />} />
-        <Route path="/recuperar-password" element={<ResetPassword />} />
-      </Routes>
-    </AuthProvider>
+    <ConfigProvider>
+      <AuthProvider>
+        <Routes>
+          <Route path="/" element={<HomePage />} />
+          <Route path="/login" element={<HomePage autoOpenLogin />} />
+          <Route path="/olvide-password" element={<ForgotPassword />} />
+          <Route path="/recuperar-password" element={<ResetPassword />} />
+        </Routes>
+      </AuthProvider>
+    </ConfigProvider>
   )
 }
 
