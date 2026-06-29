@@ -20,7 +20,7 @@ function Hero({ onOpenRegister }) {
     <header id="inicio" className="relative flex min-h-screen items-center overflow-hidden">
       {/* Fotografía real: cestería artesanal del Táchira */}
       <img
-        src={cesteriaImg}
+        src={(!loadingConfig && configWeb?.hero_imagen) ? configWeb.hero_imagen : cesteriaImg}
         alt="Cestería artesanal del Táchira"
         className="absolute inset-0 h-full w-full object-cover"
       />

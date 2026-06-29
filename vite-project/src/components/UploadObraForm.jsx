@@ -1,19 +1,75 @@
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { useAuth } from '../context/AuthContext'
+import { postularObraRequest, subirMultimediaObraRequest } from '../services/api'
 
-function UploadObraForm({ isOpen, onClose }) {
+const TIPOS_PATRIMONIO = [
+  'Cestería', 'Cerámica', 'Talla en madera', 'Textiles', 'Pintura', 'Orfebrería', 'Cuero', 'Otro'
+]
+
+function UploadObraForm({ isOpen, onClose, onObraEnviada }) {
   const { user } = useAuth()
   const [enviado, setEnviado] = useState(false)
+  const [enviando, setEnviando] = useState(false)
+  const [errorEnvio, setErrorEnvio] = useState('')
+
+  const [titulo, setTitulo] = useState('')
+  const [tipoPatrimonio, setTipoPatrimonio] = useState(TIPOS_PATRIMONIO[0])
+  const [anio, setAnio] = useState(new Date().getFullYear())
+  const [descripcion, setDescripcion] = useState('')
+  const [tecnica, setTecnica] = useState('')
+  const [archivoImagen, setArchivoImagen] = useState(null)
+  const [previsualizacion, setPrevisualizacion] = useState(null)
+  const fileInputRef = useRef(null)
 
   if (!isOpen) return null
 
-  const handleSubmit = (e) => {
+  const handleFileChange = (e) => {
+    const file = e.target.files[0]
+    if (!file) return
+    setArchivoImagen(file)
+    const reader = new FileReader()
+    reader.onload = (ev) => setPrevisualizacion(ev.target.result)
+    reader.readAsDataURL(file)
+  }
+
+  const handleSubmit = async (e) => {
     e.preventDefault()
-    setEnviado(true)
-    setTimeout(() => {
-      setEnviado(false)
-      onClose()
-    }, 3000)
+    setErrorEnvio('')
+    setEnviando(true)
+
+    try {
+      const nuevaObra = await postularObraRequest({
+        titulo,
+        tipo_patrimonio: tipoPatrimonio,
+        anio_creacion: anio,
+        descripcion,
+        tecnica_utilizada: tecnica,
+      }, user.token)
+
+      if (archivoImagen && nuevaObra?.id_obra) {
+        const fd = new FormData()
+        fd.append('archivo', archivoImagen)
+        fd.append('id_obra', nuevaObra.id_obra)
+        fd.append('tipo_archivo', 'imagen')
+        await subirMultimediaObraRequest(fd, user.token)
+      }
+
+      setEnviado(true)
+      if (onObraEnviada) onObraEnviada()
+
+      setTimeout(() => {
+        setEnviado(false)
+        setTitulo(''); setDescripcion(''); setTecnica('')
+        setTipoPatrimonio(TIPOS_PATRIMONIO[0])
+        setAnio(new Date().getFullYear())
+        setArchivoImagen(null); setPrevisualizacion(null)
+        onClose()
+      }, 3500)
+    } catch (err) {
+      setErrorEnvio(err.message || 'Ocurrió un error al enviar la obra.')
+    } finally {
+      setEnviando(false)
+    }
   }
 
   return (
@@ -53,69 +109,80 @@ function UploadObraForm({ isOpen, onClose }) {
               </div>
             ) : (
               <form onSubmit={handleSubmit} className="space-y-6">
+
+                {errorEnvio && (
+                  <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 font-sans">
+                    {errorEnvio}
+                  </div>
+                )}
                 
                 <div>
                   <label className="block font-sans text-xs font-semibold uppercase tracking-wide text-cafe-noir mb-2">
                     Título de la obra
                   </label>
-                  <input required type="text" className="w-full rounded-xl border border-cafe-noir/20 bg-white/60 px-4 py-3 font-sans text-sm shadow-sm focus:border-tertiary focus:outline-none focus:ring-1 focus:ring-tertiary" placeholder="Ej: Cesta de caña amarga" />
+                  <input required type="text" value={titulo} onChange={(e) => setTitulo(e.target.value)} className="w-full rounded-xl border border-cafe-noir/20 bg-white/60 px-4 py-3 font-sans text-sm shadow-sm focus:border-tertiary focus:outline-none focus:ring-1 focus:ring-tertiary" placeholder="Ej: Cesta de caña amarga" />
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                   <div>
                     <label className="block font-sans text-xs font-semibold uppercase tracking-wide text-cafe-noir mb-2">
-                      Categoría
+                      Tipo de Patrimonio
                     </label>
-                    <select className="w-full rounded-xl border border-cafe-noir/20 bg-white/60 px-4 py-3 font-sans text-sm shadow-sm focus:border-tertiary focus:outline-none focus:ring-1 focus:ring-tertiary">
-                      <option>Cestería</option>
-                      <option>Cerámica</option>
-                      <option>Talla en madera</option>
-                      <option>Textiles</option>
-                      <option>Pintura</option>
+                    <select value={tipoPatrimonio} onChange={(e) => setTipoPatrimonio(e.target.value)} className="w-full rounded-xl border border-cafe-noir/20 bg-white/60 px-4 py-3 font-sans text-sm shadow-sm focus:border-tertiary focus:outline-none focus:ring-1 focus:ring-tertiary">
+                      {TIPOS_PATRIMONIO.map(t => <option key={t}>{t}</option>)}
                     </select>
                   </div>
                   <div>
                     <label className="block font-sans text-xs font-semibold uppercase tracking-wide text-cafe-noir mb-2">
                       Año de creación
                     </label>
-                    <input type="number" defaultValue="2026" className="w-full rounded-xl border border-cafe-noir/20 bg-white/60 px-4 py-3 font-sans text-sm shadow-sm focus:border-tertiary focus:outline-none focus:ring-1 focus:ring-tertiary" />
+                    <input type="number" value={anio} onChange={(e) => setAnio(Number(e.target.value))} min="1900" max={new Date().getFullYear()} className="w-full rounded-xl border border-cafe-noir/20 bg-white/60 px-4 py-3 font-sans text-sm shadow-sm focus:border-tertiary focus:outline-none focus:ring-1 focus:ring-tertiary" />
                   </div>
                 </div>
 
                 <div>
                   <label className="block font-sans text-xs font-semibold uppercase tracking-wide text-cafe-noir mb-2">
-                    Descripción / Técnica usada
+                    Técnica utilizada
                   </label>
-                  <textarea rows="4" className="w-full rounded-xl border border-cafe-noir/20 bg-white/60 px-4 py-3 font-sans text-sm shadow-sm focus:border-tertiary focus:outline-none focus:ring-1 focus:ring-tertiary" placeholder="Describe los materiales y el proceso..."></textarea>
+                  <input type="text" value={tecnica} onChange={(e) => setTecnica(e.target.value)} className="w-full rounded-xl border border-cafe-noir/20 bg-white/60 px-4 py-3 font-sans text-sm shadow-sm focus:border-tertiary focus:outline-none focus:ring-1 focus:ring-tertiary" placeholder="Ej: Tejido en espiral, pincel seco..." />
+                </div>
+
+                <div>
+                  <label className="block font-sans text-xs font-semibold uppercase tracking-wide text-cafe-noir mb-2">
+                    Descripción
+                  </label>
+                  <textarea rows="3" value={descripcion} onChange={(e) => setDescripcion(e.target.value)} className="w-full rounded-xl border border-cafe-noir/20 bg-white/60 px-4 py-3 font-sans text-sm shadow-sm focus:border-tertiary focus:outline-none focus:ring-1 focus:ring-tertiary" placeholder="Describe los materiales y el proceso..." />
                 </div>
 
                 <div>
                   <label className="block font-sans text-xs font-semibold uppercase tracking-wide text-cafe-noir mb-2">
                     Fotografía de la obra
                   </label>
-                  <div className="mt-1 flex justify-center rounded-xl border-2 border-dashed border-cafe-noir/30 px-6 pt-5 pb-6 bg-white/40 hover:bg-white/60 transition-colors cursor-pointer">
-                    <div className="space-y-1 text-center">
-                      <svg className="mx-auto h-12 w-12 text-cafe-noir/40" stroke="currentColor" fill="none" viewBox="0 0 48 48" aria-hidden="true">
-                        <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                      </svg>
-                      <div className="flex text-sm text-cafe-noir/80 justify-center">
-                        <span className="relative cursor-pointer rounded-md font-medium text-tertiary focus-within:outline-none focus-within:ring-2 focus-within:ring-tertiary focus-within:ring-offset-2 hover:text-tertiary/80">
-                          <span>Sube un archivo</span>
-                          <input id="file-upload" name="file-upload" type="file" className="sr-only" />
-                        </span>
-                        <p className="pl-1">o arrastra y suelta</p>
+                  <div
+                    className="mt-1 flex justify-center rounded-xl border-2 border-dashed border-cafe-noir/30 px-6 pt-5 pb-6 bg-white/40 hover:bg-white/60 transition-colors cursor-pointer overflow-hidden"
+                    onClick={() => fileInputRef.current?.click()}
+                  >
+                    {previsualizacion ? (
+                      <img src={previsualizacion} alt="Vista previa" className="max-h-40 rounded-lg object-contain" />
+                    ) : (
+                      <div className="space-y-1 text-center">
+                        <svg className="mx-auto h-12 w-12 text-cafe-noir/40" stroke="currentColor" fill="none" viewBox="0 0 48 48" aria-hidden="true">
+                          <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                        </svg>
+                        <div className="flex text-sm text-cafe-noir/80 justify-center">
+                          <span className="font-medium text-tertiary">Sube un archivo</span>
+                          <p className="pl-1">o arrastra y suelta</p>
+                        </div>
+                        <p className="text-xs text-cafe-noir/50">PNG, JPG hasta 10MB</p>
                       </div>
-                      <p className="text-xs text-cafe-noir/50">PNG, JPG, GIF hasta 10MB</p>
-                    </div>
+                    )}
+                    <input ref={fileInputRef} type="file" accept="image/*" className="sr-only" onChange={handleFileChange} />
                   </div>
                 </div>
 
                 <div className="flex justify-end pt-4">
-                  <button
-                    type="submit"
-                    className="w-full rounded-full bg-cafe-noir px-10 py-3.5 font-sans text-sm font-semibold uppercase tracking-wider text-white shadow-md transition-opacity hover:opacity-80 sm:w-auto"
-                  >
-                    Enviar al archivo
+                  <button type="submit" disabled={enviando} className="w-full rounded-full bg-cafe-noir px-10 py-3.5 font-sans text-sm font-semibold uppercase tracking-wider text-white shadow-md transition-opacity hover:opacity-80 sm:w-auto disabled:opacity-50">
+                    {enviando ? 'Enviando...' : 'Enviar al archivo'}
                   </button>
                 </div>
               </form>

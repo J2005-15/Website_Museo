@@ -46,8 +46,7 @@ function ObraCard({ obra }) {
 
       <div className="mt-4 text-left">
         <h3 className="font-serif text-2xl text-cafe-noir">{obra.titulo}</h3>
-        <p className="mt-1 font-sans italic text-cafe-noir/80">Por {obra.autor}</p>
-        <p className="mt-0.5 font-sans text-xs uppercase tracking-wider text-cafe-noir/60">{obra.ubicacion}</p>
+        <p className="mt-1 font-sans italic text-cafe-noir/80">Autor: {obra.autor}</p>
       </div>
     </article>
   )

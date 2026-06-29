@@ -2,9 +2,11 @@ import { useAuth } from '../context/AuthContext'
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Eye, EyeOff } from 'lucide-react'
+import { useConfig } from '../context/ConfigContext'
 
 function LoginForm({ isOpen, onClose }) {
   const { login } = useAuth()
+  const { configWeb } = useConfig()
   const [correo, setCorreo] = useState('')
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
@@ -31,7 +33,14 @@ function LoginForm({ isOpen, onClose }) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-[#3a200d]/50 backdrop-blur-md">
-      <div className="relative w-full max-w-md rounded-[2rem] bg-[#F4F0E6] shadow-2xl shadow-black/50 p-8 sm:p-10 text-center">
+      <div 
+        className="relative w-full max-w-md rounded-[2rem] bg-[#F4F0E6] shadow-2xl shadow-black/50 p-8 sm:p-10 text-center"
+        style={configWeb?.login_imagen ? {
+          backgroundImage: `linear-gradient(rgba(244, 240, 230, 0.92), rgba(244, 240, 230, 0.92)), url(${configWeb.login_imagen})`,
+          backgroundSize: 'cover',
+          backgroundPosition: 'center'
+        } : {}}
+      >
         {/* Botón Cerrar */}
         <button
           onClick={onClose}
@@ -43,13 +52,13 @@ function LoginForm({ isOpen, onClose }) {
         </button>
 
         <span className="font-sans text-xs uppercase tracking-[0.1em] text-cafe-noir/80">
-          Archivo Táchira
+          {configWeb?.login_top_label || 'Archivo Táchira'}
         </span>
         <h2 className="mt-2 font-serif text-3xl text-cafe-noir">
-          Iniciar Sesión
+          {configWeb?.login_titulo || 'Iniciar Sesión'}
         </h2>
         <p className="mt-3 font-sans text-sm text-cafe-noir/80 leading-relaxed">
-          Usa tu correo y contraseña para acceder a las herramientas de cultor.
+          {configWeb?.login_subtitulo || 'Usa tu correo y contraseña para acceder a las herramientas de cultor.'}
         </p>
 
         {error && (

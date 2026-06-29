@@ -1,13 +1,12 @@
 import { useState, useEffect } from 'react'
 import { Eye, EyeOff } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
-import { obrasIniciales } from '../data/mockData'
-import { getMiPerfilRequest } from '../services/api'
+import { getMiPerfilRequest, getMisObrasRequest } from '../services/api'
 
 const estadoEstilos = {
-  Aprobada: 'bg-emerald-100 text-emerald-600 border-emerald-200/50',
-  Pendiente: 'bg-cafe-noir/5 text-cafe-noir/50 border-cafe-noir/10',
-  Rechazada: 'bg-red-100 text-red-600 border-red-200/50',
+  aprobado: 'bg-emerald-100 text-emerald-600 border-emerald-200/50',
+  pendiente: 'bg-cafe-noir/5 text-cafe-noir/50 border-cafe-noir/10',
+  rechazado: 'bg-red-100 text-red-600 border-red-200/50',
 }
 
 const tabs = [
@@ -32,6 +31,10 @@ function CultorDashboard({ isOpen, onClose, onOpenUpload, initialTab }) {
   const [perfil, setPerfil] = useState(null)
   const [perfilLoading, setPerfilLoading] = useState(false)
   const [perfilError, setPerfilError] = useState('')
+
+  // Obras reales del cultor logueado
+  const [misObras, setMisObras] = useState([])
+  const [obrasLoading, setObrasLoading] = useState(false)
 
   // Sincroniza la pestaña activa cuando el navbar abre el panel en una pestaña específica
   // (ajuste de estado durante el render, en vez de un efecto, para evitar un commit extra)
@@ -59,6 +62,19 @@ function CultorDashboard({ isOpen, onClose, onOpenUpload, initialTab }) {
       .finally(() => setPerfilLoading(false))
   }, [isOpen, user])
 
+  // Obras reales del cultor: filtradas por id_cultor en el backend gracias al token.
+  useEffect(() => {
+    if (!isOpen || !user) return
+    setObrasLoading(true)
+    getMisObrasRequest(user.token)
+      .then((data) => {
+        // Filtramos en cliente las que pertenecen al cultor del perfil si el backend retorna todas
+        setMisObras(Array.isArray(data) ? data : [])
+      })
+      .catch(() => setMisObras([]))
+      .finally(() => setObrasLoading(false))
+  }, [isOpen, user])
+
   if (!isOpen || !user) return null
 
   // Mientras carga o si falla, se usa el nombre de la sesión (Usuarios) como respaldo;
@@ -69,13 +85,10 @@ function CultorDashboard({ isOpen, onClose, onOpenUpload, initialTab }) {
         .join(' ')
     : `${user.nombres} ${user.apellidos}`
 
-  // EXCLUSIVAMENTE las obras del cultor logueado: nada de otros artesanos.
-  // Pendiente: hoy compara contra la maqueta obrasIniciales por nombre; cuando se
-  // conecte el endpoint real de obras, debe filtrarse por id_cultor en el backend.
-  const misObras = obrasIniciales.filter((obra) => obra.autor === nombreCompleto)
   const totalObras = misObras.length
-  const obrasAprobadas = misObras.filter((o) => o.estado === 'Aprobada').length
-  const obrasEnRevision = misObras.filter((o) => o.estado === 'Pendiente').length
+  const obrasAprobadas = misObras.filter((o) => o.estatus === 'aprobado').length
+  const obrasEnRevision = misObras.filter((o) => o.estatus === 'pendiente').length
+
 
   const handlePasswordChange = (e) => {
     const { name, value } = e.target
@@ -156,26 +169,30 @@ function CultorDashboard({ isOpen, onClose, onOpenUpload, initialTab }) {
                     Mis obras enviadas
                   </span>
 
-                  {misObras.length > 0 ? (
+                  {obrasLoading ? (
+                    <div className="rounded-2xl border border-cafe-noir/10 bg-white/50 px-6 py-10 text-center">
+                      <p className="font-sans text-sm text-cafe-noir/60">Cargando tus obras...</p>
+                    </div>
+                  ) : misObras.length > 0 ? (
                     <div className="w-full overflow-x-auto bg-white rounded-lg shadow-sm">
                       <table className="w-full min-w-max text-left">
                         <thead>
                           <tr className="border-b border-cafe-noir/10">
                             <th className="px-5 py-3 font-sans text-xs font-semibold uppercase tracking-wide text-cafe-noir/70">Obra</th>
-                            <th className="px-5 py-3 font-sans text-xs font-semibold uppercase tracking-wide text-cafe-noir/70">Categoría</th>
-                            <th className="px-5 py-3 font-sans text-xs font-semibold uppercase tracking-wide text-cafe-noir/70">Ubicación</th>
+                            <th className="px-5 py-3 font-sans text-xs font-semibold uppercase tracking-wide text-cafe-noir/70">Tipo</th>
+                            <th className="px-5 py-3 font-sans text-xs font-semibold uppercase tracking-wide text-cafe-noir/70">Código</th>
                             <th className="px-5 py-3 font-sans text-xs font-semibold uppercase tracking-wide text-cafe-noir/70">Estado</th>
                           </tr>
                         </thead>
                         <tbody>
                           {misObras.map((obra) => (
-                            <tr key={obra.id} className="border-b border-cafe-noir/5 last:border-0">
-                              <td className="px-5 py-4 font-sans text-sm font-medium text-cafe-noir">{obra.titulo}</td>
-                              <td className="px-5 py-4 font-sans text-sm text-cafe-noir/80">{obra.categoria}</td>
-                              <td className="px-5 py-4 font-sans text-sm text-cafe-noir/60">{obra.ubicacion}</td>
+                            <tr key={obra.id_obra} className="border-b border-cafe-noir/5 last:border-0">
+                              <td className="px-5 py-4 font-sans text-sm font-medium text-cafe-noir capitalize">{obra.titulo}</td>
+                              <td className="px-5 py-4 font-sans text-sm text-cafe-noir/80">{obra.tipo_patrimonio || '—'}</td>
+                              <td className="px-5 py-4 font-sans text-sm text-cafe-noir/60">{obra.codigo_qr_link || '—'}</td>
                               <td className="px-5 py-4">
-                                <span className={`inline-flex items-center rounded-full border px-3 py-1 font-sans text-[11px] font-semibold uppercase tracking-wide ${estadoEstilos[obra.estado] || estadoEstilos.Pendiente}`}>
-                                  {obra.estado}
+                                <span className={`inline-flex items-center rounded-full border px-3 py-1 font-sans text-[11px] font-semibold uppercase tracking-wide ${estadoEstilos[obra.estatus] || estadoEstilos.pendiente}`}>
+                                  {obra.estatus === 'aprobado' ? 'Aprobada' : obra.estatus === 'pendiente' ? 'En Revisión' : 'Rechazada'}
                                 </span>
                               </td>
                             </tr>

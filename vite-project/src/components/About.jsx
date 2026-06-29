@@ -19,7 +19,7 @@ Tras años de evolución y compromiso con la cultura, el 30 de septiembre de 200
           <div className={`relative lg:w-5/12 transition-all duration-1000 ease-out transform ${isVisible ? 'translate-x-0 opacity-100' : 'translate-x-24 opacity-0'}`}>
             <div className="relative aspect-[2/3] w-full overflow-hidden rounded-[2rem] shadow-2xl shadow-cafe-noir/10 z-10">
               <img 
-                src={artisanHandsImg} 
+                src={(!loadingConfig && configWeb?.about_imagen) ? configWeb.about_imagen : artisanHandsImg} 
                 alt="Manos artesanas moldeando arcilla" 
                 className="h-full w-full object-cover sepia-[.15] contrast-[1.05]"
               />

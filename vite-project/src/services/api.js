@@ -171,3 +171,42 @@ export async function getExposicionActivaRequest() {
     throw new Error(errorMsg, { cause: error })
   }
 }
+
+// Envía una nueva obra desde el portal del cultor. El backend asignará estatus 'pendiente'.
+export async function postularObraRequest(data, token) {
+  try {
+    const response = await axios.post(`${API_URL}/obras`, data, {
+      headers: { Authorization: `Bearer ${token}` }
+    })
+    return response.data
+  } catch (error) {
+    const errorMsg = error.response?.data?.error || error.response?.data?.message || 'Error al enviar la obra'
+    throw new Error(errorMsg, { cause: error })
+  }
+}
+
+// Sube archivo multimedia ligado a una obra recién creada
+export async function subirMultimediaObraRequest(formData, token) {
+  try {
+    const response = await axios.post(`${API_URL}/multimedia/upload`, formData, {
+      headers: { Authorization: `Bearer ${token}` }
+    })
+    return response.data
+  } catch (error) {
+    const errorMsg = error.response?.data?.error || error.response?.data?.message || 'Error al subir la imagen de la obra'
+    throw new Error(errorMsg, { cause: error })
+  }
+}
+
+// Obtiene todas las obras del cultor logueado (aprobadas + pendientes)
+export async function getMisObrasRequest(token) {
+  try {
+    const response = await axios.get(`${API_URL}/obras`, {
+      headers: { Authorization: `Bearer ${token}` }
+    })
+    return response.data
+  } catch (error) {
+    const errorMsg = error.response?.data?.error || error.response?.data?.message || 'Error al obtener tus obras'
+    throw new Error(errorMsg, { cause: error })
+  }
+}

@@ -24,8 +24,8 @@ function Gallery() {
           ...o,
           id: o.id_obra,
           categoria: o.tipo_patrimonio || 'N/A',
-          imagenUrl: null, // Asumimos que aún no hay url de imagen guardada
-          autor: o.cultor ? `${o.cultor.nombre} ${o.cultor.apellido}` : 'Cultor Anónimo',
+          imagenUrl: o.multimedia && o.multimedia[0] ? o.multimedia[0].url_archivo : null,
+          autor: o.cultor ? `${o.cultor.primer_nombre} ${o.cultor.primer_apellido}` : 'Cultor Anónimo',
           ubicacion: o.ubicacion_actual || 'Ubicación no especificada'
         }))
         setObras(obrasMapeadas)

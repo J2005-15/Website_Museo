@@ -25,8 +25,8 @@ function Eventos() {
               ...o,
               id: o.id_obra,
               categoria: o.tipo_patrimonio || 'N/A',
-              imagenUrl: null,
-              autor: `Cultor #${o.id_cultor}`, // Ajustar si incluye join
+              imagenUrl: o.multimedia && o.multimedia[0] ? o.multimedia[0].url_archivo : null,
+              autor: o.cultor ? `${o.cultor.primer_nombre} ${o.cultor.primer_apellido}` : 'Cultor Anónimo',
               ubicacion: o.ubicacion_actual || 'Ubicación no especificada'
             })))
           }
@@ -39,8 +39,15 @@ function Eventos() {
   }, [])
 
   const formatFecha = (fechaString) => {
+    if (!fechaString) return ''
+    const parts = fechaString.split('T')[0].split('-')
+    if (parts.length !== 3) return new Date(fechaString).toLocaleDateString('es-ES')
+    const year = parseInt(parts[0], 10)
+    const month = parseInt(parts[1], 10) - 1
+    const day = parseInt(parts[2], 10)
+    const date = new Date(year, month, day)
     const opciones = { year: 'numeric', month: 'long', day: 'numeric' }
-    return new Date(fechaString).toLocaleDateString('es-ES', opciones)
+    return date.toLocaleDateString('es-ES', opciones)
   }
 
   return (
@@ -60,17 +67,18 @@ function Eventos() {
             <div className="flex flex-col items-center">
               {/* Encabezado elegante sin caja */}
               <div className="text-center max-w-3xl">
-
-                
-                <h2 className="mt-4 font-serif text-5xl lg:text-6xl text-cafe-noir leading-tight">
+                <span className="font-sans text-xs uppercase tracking-[0.25em] text-tertiary">
+                  Exposición Actual
+                </span>
+                <h2 className="mt-4 font-serif text-4xl text-cafe-noir lg:text-5xl capitalize">
                   {eventoActual.titulo}
                 </h2>
-                
-                <div className="mx-auto mt-8 h-px w-20 bg-primary/40" />
-
-                <p className="mt-8 font-sans text-lg text-cafe-noir/80 leading-relaxed">
-                  {eventoActual.descripcion}
-                </p>
+                <div className="mx-auto mt-6 h-px w-20 bg-primary" />
+                {eventoActual.descripcion && (
+                  <p className="mx-auto mt-6 max-w-xl font-sans leading-relaxed text-primary">
+                    {eventoActual.descripcion}
+                  </p>
+                )}
 
                 {/* Bloque de Fechas Limpio */}
                 <div className="mt-12 inline-flex flex-col sm:flex-row items-center gap-6 sm:gap-8 rounded-full border border-cafe-noir/10 bg-white/40 px-8 py-3.5 shadow-sm backdrop-blur-sm">
