@@ -1,5 +1,4 @@
-import { useState, useEffect } from 'react'
-import { useReveal } from '../hooks/useReveal'
+import { useState, useEffect, useRef } from 'react'
 import { getEfemeridesPublicasRequest } from '../services/api'
 
 const NOMBRES_MES = [
@@ -7,11 +6,8 @@ const NOMBRES_MES = [
   'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre',
 ]
 
-// Sección "Efemérides Culturales": se oculta sola (retorna null) cuando no hay
-// ninguna efeméride activa, y aparece automáticamente en cuanto el admin activa
-// al menos una desde el dashboard.
 function Efemerides() {
-  const { ref, isVisible } = useReveal(0)
+  const ref = useRef(null)
   const [efemerides, setEfemerides] = useState([])
   const [cargado, setCargado] = useState(false)
 
@@ -22,63 +18,66 @@ function Efemerides() {
       .finally(() => setCargado(true))
   }, [])
 
-  if (!cargado || efemerides.length === 0) return null
+  if (!cargado) return null
+  if (efemerides.length === 0) return null
 
   return (
-    <section
-      id="efemerides"
-      ref={ref}
-      className="relative scroll-mt-20 bg-gallery-cream py-16 lg:py-20 overflow-hidden border-t border-cafe-noir/10"
-    >
-      <div className={`mx-auto max-w-6xl px-6 transition-all duration-1000 ease-out transform ${isVisible ? 'translate-y-0 opacity-100' : 'translate-y-12 opacity-0'}`}>
-        <div className="text-center max-w-2xl mx-auto mb-16">
+    <section id="efemerides" ref={ref} className="relative scroll-mt-20 bg-gallery-cream py-20 lg:py-32 overflow-hidden">
+      <div className="mx-auto max-w-6xl px-6">
+        <div className="text-center max-w-2xl mx-auto mb-20">
           <span className="font-sans text-xs uppercase tracking-[0.25em] text-tertiary">
             Memoria y Tradición
           </span>
           <h2 className="mt-4 font-serif text-4xl text-cafe-noir lg:text-5xl">
             Efemérides Culturales
           </h2>
-          <div className="mx-auto mt-6 h-px w-20 bg-primary" />
+          <div className="mx-auto mt-6 h-px w-20 bg-primary/40" />
           <p className="mx-auto mt-6 font-sans leading-relaxed text-primary">
             Fechas destacadas del folklore y la historia cultural venezolana.
           </p>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
-          {efemerides.map((efe) => (
-            <div
-              key={efe.id_efemeride}
-              className="group flex flex-col overflow-hidden rounded-2xl bg-white shadow-lg transition-transform hover:-translate-y-1 hover:shadow-xl"
-            >
-              {efe.imagen ? (
-                <div className="aspect-[4/3] w-full bg-cafe-noir/5">
-                  <img src={efe.imagen} alt={efe.titulo} className="h-full w-full object-cover" />
-                </div>
-              ) : null}
-              <div className="flex flex-col flex-grow p-6">
-                <div className="flex items-center gap-2 mb-3">
-                  <span className="inline-flex items-center rounded-full bg-tertiary/10 px-3 py-1 font-sans text-xs font-semibold uppercase tracking-wide text-tertiary">
-                    {efe.dia} de {NOMBRES_MES[efe.mes - 1]}
-                  </span>
-                  {efe.anio_referencia && (
-                    <span className="font-sans text-xs text-cafe-noir/50">{efe.anio_referencia}</span>
-                  )}
-                </div>
-                <h3 className="font-serif text-xl text-cafe-noir mb-2">{efe.titulo}</h3>
-                {efe.categoria && (
-                  <p className="font-sans text-[11px] uppercase tracking-widest text-cafe-noir/40 mb-2">
-                    {efe.categoria}
-                  </p>
-                )}
-                {efe.descripcion && (
-                  <p className="font-sans text-sm text-cafe-noir/80 leading-relaxed line-clamp-4">
-                    {efe.descripcion}
-                  </p>
+        {efemerides.map((efe) => (
+          <div key={efe.id_efemeride} className="flex flex-col gap-6 lg:flex-row lg:gap-12 mb-16 lg:mb-24">
+
+            {/* Texto (a la izquierda en desktop) */}
+            <div className="order-2 lg:order-1 lg:w-1/2 text-left flex flex-col justify-center">
+              <span className="font-sans text-xs uppercase tracking-[0.25em] text-tertiary">
+                {efe.dia} de {NOMBRES_MES[efe.mes - 1]}{efe.anio_referencia ? `, ${efe.anio_referencia}` : ''}
+              </span>
+              <h3 className="mt-4 font-serif text-3xl text-cafe-noir lg:text-4xl lg:leading-tight">
+                {efe.titulo}
+              </h3>
+              <div className="mt-5 h-px w-20 bg-primary/40" />
+              {efe.categoria && (
+                <p className="mt-5 font-sans text-xs uppercase tracking-widest text-cafe-noir/40">
+                  {efe.categoria}
+                </p>
+              )}
+              {efe.descripcion && (
+                <p className="mt-4 font-sans text-base lg:text-lg text-cafe-noir/80 leading-relaxed text-justify">
+                  {efe.descripcion}
+                </p>
+              )}
+            </div>
+
+            {/* Imagen (a la derecha en desktop) */}
+            <div className="order-1 lg:order-2 relative lg:w-1/2">
+              <div className="relative w-full overflow-hidden rounded-[2rem] shadow-2xl shadow-cafe-noir/10 z-10">
+                {efe.imagen ? (
+                  <img src={efe.imagen} alt={efe.titulo} className="w-full sepia-[.15] contrast-[1.05] block" />
+                ) : (
+                  <div className="aspect-[3/2] w-full bg-tertiary/10 flex items-center justify-center">
+                    <span className="font-sans text-xs uppercase tracking-widest text-cafe-noir/30">Sin imagen</span>
+                  </div>
                 )}
               </div>
+              <div className="absolute -bottom-6 -right-6 z-0 h-48 w-48 rounded-full border border-cafe-noir/10"></div>
+              <div className="absolute -top-6 -left-6 z-0 h-32 w-32 rounded-full border border-cafe-noir/5"></div>
             </div>
-          ))}
-        </div>
+
+          </div>
+        ))}
       </div>
     </section>
   )

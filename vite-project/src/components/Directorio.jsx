@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { getCultoresPublicosRequest } from '../services/api'
+import { socket } from '../services/socket'
 import { useReveal } from '../hooks/useReveal'
 
 function Directorio({ onSelectCultor }) {
@@ -16,6 +17,20 @@ function Directorio({ onSelectCultor }) {
       .catch(() => { if (!cancelled) setCultores([]) })
       .finally(() => { if (!cancelled) setIsLoading(false) })
     return () => { cancelled = true }
+  }, [])
+
+  useEffect(() => {
+    const reFetch = () => {
+      getCultoresPublicosRequest()
+        .then((data) => setCultores(data))
+        .catch(() => setCultores([]))
+    }
+    socket.on('cultor:updated', reFetch)
+    socket.on('admin:update', reFetch)
+    return () => {
+      socket.off('cultor:updated', reFetch)
+      socket.off('admin:update', reFetch)
+    }
   }, [])
 
   const categorias = [
@@ -113,7 +128,7 @@ function Directorio({ onSelectCultor }) {
                     {cultor.rol}
                   </span>
                 )}
-                <div className="aspect-[4/3] w-full bg-cafe-noir/5 relative">
+                <div className="h-[32rem] w-full bg-gradient-to-b from-cafe-noir/5 to-cafe-noir/10 relative overflow-hidden">
                   {cultor.foto_perfil ? (
                     <img src={cultor.foto_perfil} alt={cultor.nombre_completo} className="h-full w-full object-cover grayscale transition-all duration-500 group-hover:grayscale-0" />
                   ) : (

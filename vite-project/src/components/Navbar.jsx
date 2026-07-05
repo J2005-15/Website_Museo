@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react'
 import { useAuth } from '../context/AuthContext'
-import { getNotificacionesRequest, marcarNotificacionesLeidasRequest } from '../services/api'
+import { getNotificacionesRequest, marcarNotificacionesLeidasRequest, marcarNotificacionLeidaRequest } from '../services/api'
 import logoM from '../assets/LogoM.png'
 
 // Icono y color por `tipo` de notificación (los únicos valores que entrega el backend:
@@ -69,6 +69,21 @@ function Navbar({ onOpenRegister, onOpenLogin, onOpenPanel }) {
       // Si falla, dejamos las notificaciones como estaban — el usuario puede reintentar.
     } finally {
       setMarcandoLeidas(false)
+    }
+  }
+
+  const handleNotificacionClick = (notif) => {
+    setNotificacionesAbiertas(false)
+    if (!notif.leida && user) {
+      marcarNotificacionLeidaRequest(notif.id_notificacion, user.token)
+        .then(() => setNotificaciones((prev) => prev.map((n) => n.id_notificacion === notif.id_notificacion ? { ...n, leida: true } : n)))
+        .catch(() => {})
+    }
+    const tituloLower = (notif.titulo || '').toLowerCase()
+    if (tituloLower.includes('obra')) {
+      onOpenPanel('obras')
+    } else {
+      onOpenPanel('perfil')
     }
   }
 
@@ -194,7 +209,7 @@ function Navbar({ onOpenRegister, onOpenLogin, onOpenPanel }) {
                         notificaciones.map((notif) => {
                           const { clase, path, strokeWidth } = iconoNotificacion(notif.tipo)
                           return (
-                            <div key={notif.id_notificacion} className={`group relative p-5 border-b border-cafe-noir/5 hover:bg-cafe-noir/[0.02] transition-colors ${!notif.leida ? 'bg-gallery-cream/30' : ''}`}>
+                            <div key={notif.id_notificacion} onClick={() => handleNotificacionClick(notif)} className={`group relative p-5 border-b border-cafe-noir/5 hover:bg-cafe-noir/[0.02] transition-colors cursor-pointer ${!notif.leida ? 'bg-gallery-cream/30' : ''}`}>
                               {!notif.leida && (
                                 <div className="absolute left-2 top-1/2 -translate-y-1/2 h-1.5 w-1.5 rounded-full bg-red-500 shadow-sm" />
                               )}
@@ -369,7 +384,7 @@ function Navbar({ onOpenRegister, onOpenLogin, onOpenPanel }) {
                       <div className="max-h-60 overflow-y-auto">
                         {notificaciones.length > 0 ? (
                           notificaciones.map((notif) => (
-                            <div key={notif.id_notificacion} className={`p-3 border-b border-cafe-noir/5 ${!notif.leida ? 'bg-gallery-cream/30' : ''}`}>
+                            <div key={notif.id_notificacion} onClick={() => { handleNotificacionClick(notif); setMenuAbierto(false) }} className={`p-3 border-b border-cafe-noir/5 cursor-pointer ${!notif.leida ? 'bg-gallery-cream/30' : ''}`}>
                               <p className="font-sans text-xs font-semibold text-cafe-noir">{notif.titulo}</p>
                               <p className="font-sans text-[10px] text-cafe-noir/70 mt-1 line-clamp-2">{notif.mensaje}</p>
                             </div>

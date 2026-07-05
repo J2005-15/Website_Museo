@@ -1,16 +1,29 @@
 import cesteriaImg from '../assets/Cesteria.jpeg'
 import { useAuth } from '../context/AuthContext'
 import { useConfig } from '../context/ConfigContext'
-
-const stats = [
-  { value: '+120', label: 'Obras digitalizadas' },
-  { value: '+45', label: 'Cultores activos' },
-  { value: '29', label: 'Municipios' },
-]
+import { useState, useEffect } from 'react'
+import { getStatsRequest } from '../services/api'
 
 function Hero({ onOpenRegister }) {
   const { user } = useAuth()
   const { configWeb, loadingConfig } = useConfig()
+  const [stats, setStats] = useState([
+    { value: '...', label: 'Obras digitalizadas' },
+    { value: '...', label: 'Cultores activos' },
+    { value: '...', label: 'Municipios' },
+  ])
+
+  useEffect(() => {
+    getStatsRequest().then((data) => {
+      if (data) {
+        setStats([
+          { value: `+${data.obras_aprobadas}`, label: 'Obras digitalizadas' },
+          { value: `+${data.cultores_activos}`, label: 'Cultores activos' },
+          { value: String(data.municipios), label: 'Municipios' },
+        ])
+      }
+    })
+  }, [])
 
   // Valores por defecto en caso de que aún esté cargando o falle
   const defaultTitulo = "Preservando la Memoria\nCultural del Táchira"

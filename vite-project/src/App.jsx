@@ -1,7 +1,8 @@
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Routes, Route } from 'react-router-dom'
-import { AuthProvider } from './context/AuthContext'
+import { AuthProvider, useAuth } from './context/AuthContext'
 import { ConfigProvider } from './context/ConfigContext'
+import { socket } from './services/socket'
 import Navbar from './components/Navbar'
 import Hero from './components/Hero'
 import About from './components/About'
@@ -28,6 +29,25 @@ function HomePage({ autoOpenLogin = false }) {
   const [isPanelOpen, setIsPanelOpen] = useState(false)
   const [panelTab, setPanelTab] = useState('obras')
   const [selectedCultor, setSelectedCultor] = useState(null)
+  const { user } = useAuth()
+  const prevUser = useRef(user)
+
+  useEffect(() => {
+    if ('scrollRestoration' in history) history.scrollRestoration = 'manual'
+    window.scrollTo(0, 0)
+  }, [])
+
+  useEffect(() => {
+    socket.on('admin:update', () => window.location.reload())
+    return () => { socket.off('admin:update') }
+  }, [])
+
+  useEffect(() => {
+    if (prevUser.current !== user) {
+      window.location.reload()
+    }
+    prevUser.current = user
+  }, [user])
 
   return (
     <div className="scroll-smooth bg-linen relative">

@@ -3,6 +3,7 @@ import { useReveal } from '../hooks/useReveal'
 import { useAuth } from '../context/AuthContext'
 import ObraCard from './ObraCard'
 import { getGaleriaPublicaRequest } from '../services/api'
+import { socket } from '../services/socket'
 
 function Gallery() {
   const [obras, setObras] = useState([])
@@ -11,31 +12,41 @@ function Gallery() {
   const { ref, isVisible } = useReveal(0.2)
   const { user } = useAuth()
 
+  const fetchObras = async () => {
+    try {
+      const data = await getGaleriaPublicaRequest()
+      const obrasMapeadas = data.map(o => ({
+        ...o,
+        id: o.id_obra,
+        categoria: o.tipo_patrimonio || 'N/A',
+        imagenUrl: o.multimedia && o.multimedia[0] ? o.multimedia[0].url_archivo : null,
+        autor: o.cultor ? `${o.cultor.primer_nombre} ${o.cultor.primer_apellido}` : 'Cultor Anónimo',
+        ubicacion: o.ubicacion_actual || 'Ubicación no especificada'
+      }))
+      setObras(obrasMapeadas)
+      const cats = new Set(obrasMapeadas.map(o => o.categoria))
+      setCategorias(['Todas', ...Array.from(cats)])
+    } catch (error) {
+      console.error("Error al cargar la galería", error)
+    }
+  }
+
   const obrasFiltradas = useMemo(() => {
     if (filtro === 'Todas') return obras
     return obras.filter((obra) => obra.tipo_patrimonio === filtro)
   }, [obras, filtro])
 
   useEffect(() => {
-    const fetchObras = async () => {
-      try {
-        const data = await getGaleriaPublicaRequest()
-        const obrasMapeadas = data.map(o => ({
-          ...o,
-          id: o.id_obra,
-          categoria: o.tipo_patrimonio || 'N/A',
-          imagenUrl: o.multimedia && o.multimedia[0] ? o.multimedia[0].url_archivo : null,
-          autor: o.cultor ? `${o.cultor.primer_nombre} ${o.cultor.primer_apellido}` : 'Cultor Anónimo',
-          ubicacion: o.ubicacion_actual || 'Ubicación no especificada'
-        }))
-        setObras(obrasMapeadas)
-        const cats = new Set(obrasMapeadas.map(o => o.categoria))
-        setCategorias(['Todas', ...Array.from(cats)])
-      } catch (error) {
-        console.error("Error al cargar la galería", error)
-      }
-    }
     fetchObras()
+  }, [])
+
+  useEffect(() => {
+    socket.on('obra:updated', fetchObras)
+    socket.on('admin:update', fetchObras)
+    return () => {
+      socket.off('obra:updated', fetchObras)
+      socket.off('admin:update', fetchObras)
+    }
   }, [])
 
   // La colección pública solo es para visitantes; un cultor con sesión activa

@@ -86,6 +86,19 @@ export async function marcarNotificacionesLeidasRequest(token) {
   }
 }
 
+// Marca una notificación individual como leída.
+export async function marcarNotificacionLeidaRequest(id, token) {
+  try {
+    const response = await axios.patch(`${API_URL}/notificaciones/${id}/leer`, {}, {
+      headers: { Authorization: `Bearer ${token}` }
+    })
+    return response.data
+  } catch (error) {
+    const errorMsg = error.response?.data?.error || error.response?.data?.message || 'Error al marcar la notificación'
+    throw new Error(errorMsg, { cause: error })
+  }
+}
+
 // Lista de parroquias para poblar el <select> de id_parroquia. Ruta pública (sin auth).
 export async function getParroquiasRequest() {
   try {
@@ -241,7 +254,7 @@ export async function getExposicionActivaRequest() {
 // se oculta sola cuando esta lista viene vacía.
 export async function getEfemeridesPublicasRequest() {
   try {
-    const response = await axios.get(`${API_URL}/efemerides/publicas`)
+    const response = await axios.get(`${API_URL}/efemerides/publicas?_=${Date.now()}`)
     return response.data
   } catch (error) {
     const errorMsg = error.response?.data?.error || error.response?.data?.message || 'Error al obtener las efemérides'
@@ -338,5 +351,16 @@ export async function getObrasPublicasRequest(cultorId) {
   } catch (error) {
     const errorMsg = error.response?.data?.error || error.response?.data?.message || 'Error al obtener las obras'
     throw new Error(errorMsg, { cause: error })
+  }
+}
+
+// Estadísticas públicas: obras aprobadas, cultores activos, municipios
+export async function getStatsRequest() {
+  try {
+    const response = await axios.get(`${API_URL}/stats`)
+    return response.data
+  } catch (error) {
+    console.error('Error al obtener estadísticas:', error)
+    return null
   }
 }

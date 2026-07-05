@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import ObraCard from './ObraCard'
 import { getObrasPublicasRequest } from '../services/api'
+import { socket } from '../services/socket'
 
 function CultorProfile({ cultor, onClose }) {
   const [obras, setObras] = useState([])
@@ -26,6 +27,38 @@ function CultorProfile({ cultor, onClose }) {
         .finally(() => { if (!cancelled) setObrasLoading(false) })
     }
     return () => { cancelled = true }
+  }, [cultor?.id])
+
+  useEffect(() => {
+    const reFetchObras = () => {
+      if (!cultor?.id) return
+      getObrasPublicasRequest(cultor.id)
+        .then((data) => {
+          const mapeadas = (Array.isArray(data) ? data : []).map((o) => ({
+            ...o,
+            id: o.id_obra,
+            categoria: o.tipo_patrimonio || 'N/A',
+            imagenUrl: o.multimedia && o.multimedia[0] ? o.multimedia[0].url_archivo : null,
+            autor: o.cultor ? `${o.cultor.primer_nombre} ${o.cultor.primer_apellido}` : 'Cultor Anónimo',
+          }))
+          setObras(mapeadas)
+        })
+        .catch(() => setObras([]))
+    }
+    socket.on('obra:updated', reFetchObras)
+    socket.on('cultor:updated', (payload) => {
+      if (!payload?.id_cultor || payload.id_cultor === cultor?.id) {
+        reFetchObras()
+      }
+    })
+    socket.on('fe-de-vida:updated', reFetchObras)
+    socket.on('admin:update', reFetchObras)
+    return () => {
+      socket.off('obra:updated', reFetchObras)
+      socket.off('cultor:updated')
+      socket.off('fe-de-vida:updated', reFetchObras)
+      socket.off('admin:update', reFetchObras)
+    }
   }, [cultor?.id])
 
   // Evitar scroll en el body cuando el modal está abierto
@@ -82,7 +115,7 @@ function CultorProfile({ cultor, onClose }) {
           <div className="relative z-10 text-center px-4 translate-y-12">
             <div className="mx-auto h-28 w-28 rounded-full border-4 border-linen bg-gallery-cream shadow-xl overflow-hidden flex items-center justify-center">
               {cultor.foto_perfil ? (
-                <img src={cultor.foto_perfil} alt={cultor.nombre_completo} className="w-full h-full object-cover" />
+                <img src={cultor.foto_perfil} alt={cultor.nombre_completo} className="w-full h-full object-contain p-1" />
               ) : (
                 <span className="font-serif text-4xl text-tertiary">
                   {iniciales}
