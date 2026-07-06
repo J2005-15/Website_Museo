@@ -18,6 +18,7 @@ import CultorProfile from './components/CultorProfile'
 import Footer from './components/Footer'
 import ForgotPassword from './components/ForgotPassword'
 import ResetPassword from './components/ResetPassword'
+import ManualWeb from './components/ManualWeb'
 
 // La home pública: Navbar + secciones + todos los modales (Registro, Login, Subir
 // obra, Panel del cultor). El login nunca tuvo página propia, vive como modal — por
@@ -50,7 +51,7 @@ function HomePage({ autoOpenLogin = false }) {
   }, [user])
 
   return (
-    <div className="scroll-smooth bg-linen relative">
+    <div className="scroll-smooth bg-linen relative overflow-x-hidden">
       <Navbar
         onOpenRegister={() => setIsRegisterOpen(true)}
         onOpenLogin={() => setIsLoginOpen(true)}
@@ -88,6 +89,7 @@ function App() {
           <Route path="/login" element={<HomePage autoOpenLogin />} />
           <Route path="/olvide-password" element={<ForgotPassword />} />
           <Route path="/recuperar-password" element={<ResetPassword />} />
+          <Route path="/manual-usuario" element={<ManualWeb />} />
         </Routes>
       </AuthProvider>
     </ConfigProvider>

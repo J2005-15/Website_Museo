@@ -145,16 +145,16 @@ function Navbar({ onOpenRegister, onOpenLogin, onOpenPanel }) {
   return (
     <header className={`fixed top-0 z-50 w-full transition-all duration-300 ${scrolled ? 'bg-linen/95 backdrop-blur-xl shadow-sm shadow-cafe-noir/10' : 'bg-linen/5 backdrop-blur-md'}`}>
       <nav className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3 sm:px-6">
-        <a href="#inicio" className="flex items-center gap-3" onClick={cerrarMenu}>
+        <a href="#inicio" className="flex items-center gap-3 mr-8 shrink-0" onClick={cerrarMenu}>
           <img src={logoM} alt="Museo del Táchira" className="h-12 w-auto sm:h-16" />
           <span className={`font-serif text-xl sm:text-2xl transition-colors ${scrolled ? 'text-cafe-noir' : 'text-linen [text-shadow:0_1px_10px_rgba(41,24,4,0.7)]'}`}>
             Archivo Táchira
           </span>
         </a>
 
-        <ul className="hidden items-center gap-10 md:flex">
+        <ul className="hidden items-center gap-6 md:flex">
           {!user ? (
-            links.map((link) => (
+            <>{links.map((link) => (
               <li key={link.href}>
                 <a
                   href={link.href}
@@ -163,7 +163,16 @@ function Navbar({ onOpenRegister, onOpenLogin, onOpenPanel }) {
                   {link.label}
                 </a>
               </li>
-            ))
+            ))}
+              <li>
+                <a
+                  href="/manual-usuario"
+                  className={`font-sans text-xs font-medium uppercase tracking-widest transition-colors ${textoBase} ${textoBaseHover}`}
+                >
+                  Manual de Uso
+                </a>
+              </li>
+            </>
           ) : (
             <li>
               <a
@@ -177,13 +186,14 @@ function Navbar({ onOpenRegister, onOpenLogin, onOpenPanel }) {
           )}
         </ul>
 
-        <div className="hidden items-center gap-4 md:flex">
+        <div className="hidden items-center gap-6 md:flex">
           {user ? (
               <div className="flex items-center gap-4 relative" ref={notificacionesRef}>
                 
                 {/* Botón Campana Notificaciones */}
                 <button
                   onClick={toggleNotificaciones}
+                  onMouseDown={(e) => e.stopPropagation()}
                   className={`relative p-2 rounded-full transition-colors ${scrolled ? 'text-cafe-noir hover:bg-cafe-noir/5' : 'text-linen hover:bg-white/10'}`}
                 >
                   <svg className="h-6 w-6 drop-shadow-md" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -286,6 +296,12 @@ function Navbar({ onOpenRegister, onOpenLogin, onOpenPanel }) {
                       >
                         Mis Obras
                       </button>
+                      <a
+                        href="/manual-usuario"
+                        className="block w-full px-4 py-2.5 text-left font-sans text-sm text-cafe-noir hover:bg-cafe-noir/5 transition-colors"
+                      >
+                        Manual de Uso
+                      </a>
                       <button
                         onClick={() => { setCuentaAbierta(false); logout() }}
                         className="block w-full border-t border-cafe-noir/10 px-4 py-2.5 text-left font-sans text-sm font-medium text-red-600 hover:bg-red-50 transition-colors"
@@ -337,7 +353,7 @@ function Navbar({ onOpenRegister, onOpenLogin, onOpenPanel }) {
         <div className={`border-t md:hidden transition-colors ${scrolled ? 'border-cafe-noir/10 bg-linen/95 backdrop-blur-xl' : 'border-white/10 bg-linen/5 backdrop-blur-md'}`}>
           <ul className="flex flex-col gap-1 px-4 py-4">
             {!user ? (
-              links.map((link) => (
+              <>{links.map((link) => (
                 <li key={link.href}>
                   <a
                     href={link.href}
@@ -347,7 +363,17 @@ function Navbar({ onOpenRegister, onOpenLogin, onOpenPanel }) {
                     {link.label}
                   </a>
                 </li>
-              ))
+              ))}
+                <li>
+                  <a
+                    href="/manual-usuario"
+                    onClick={cerrarMenu}
+                    className={`block rounded-lg px-3 py-2.5 font-sans text-sm font-medium uppercase tracking-widest transition-colors ${scrolled ? 'text-cafe-noir hover:bg-cafe-noir/5' : 'text-linen [text-shadow:0_1px_8px_rgba(41,24,4,0.7)] hover:bg-white/15'}`}
+                  >
+                    Manual de Uso
+                  </a>
+                </li>
+              </>
             ) : (
               <li>
                 <a
@@ -376,6 +402,7 @@ function Navbar({ onOpenRegister, onOpenLogin, onOpenPanel }) {
                     </div>
                     <button
                       onClick={toggleNotificaciones}
+                      onMouseDown={(e) => e.stopPropagation()}
                       className={`relative p-2 rounded-full ${scrolled ? 'text-cafe-noir bg-cafe-noir/5' : 'text-linen bg-white/10'}`}
                     >
                       <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -422,13 +449,19 @@ function Navbar({ onOpenRegister, onOpenLogin, onOpenPanel }) {
                   </button>
                   <button
                     onClick={() => { cerrarMenu(); onOpenPanel('obras'); }}
-                    className="mb-2 block w-full rounded-full border border-white/30 px-6 py-2.5 text-center font-sans text-xs font-semibold uppercase tracking-wide text-linen"
+                    className={`mb-2 block w-full rounded-full border px-6 py-2.5 text-center font-sans text-xs font-semibold uppercase tracking-wide transition-colors ${scrolled ? 'border-cafe-noir/20 text-cafe-noir hover:bg-cafe-noir/5' : 'border-white/30 text-linen hover:bg-white/10'}`}
                   >
                     Mis Obras
                   </button>
+                  <a
+                    href="/manual-usuario"
+                    className={`mb-2 block w-full rounded-full border px-6 py-2.5 text-center font-sans text-xs font-semibold uppercase tracking-wide transition-colors ${scrolled ? 'border-cafe-noir/20 text-cafe-noir hover:bg-cafe-noir/5' : 'border-white/30 text-linen hover:bg-white/10'}`}
+                  >
+                    Manual de Uso
+                  </a>
                   <button
                     onClick={() => { cerrarMenu(); logout(); }}
-                    className="block w-full rounded-full border border-red-300/40 px-6 py-2.5 text-center font-sans text-xs font-semibold uppercase tracking-wide text-red-200"
+                    className={`block w-full rounded-full border px-6 py-2.5 text-center font-sans text-xs font-semibold uppercase tracking-wide transition-colors ${scrolled ? 'border-red-300/60 text-red-700 hover:bg-red-50' : 'border-red-300/40 text-red-200 hover:bg-white/10'}`}
                   >
                     Cerrar Sesión
                   </button>
@@ -437,13 +470,13 @@ function Navbar({ onOpenRegister, onOpenLogin, onOpenPanel }) {
                 <div className="flex flex-col gap-2">
                   <button
                     onClick={() => { cerrarMenu(); onOpenLogin(); }}
-                    className="block w-full rounded-full border border-white/30 px-6 py-2.5 text-center font-sans text-xs font-semibold uppercase tracking-wide text-linen"
+                    className={`block w-full rounded-full border px-6 py-2.5 text-center font-sans text-xs font-semibold uppercase tracking-wide transition-colors ${scrolled ? 'border-cafe-noir/30 text-cafe-noir hover:bg-cafe-noir/5' : 'border-white/30 text-linen hover:bg-white/10'}`}
                   >
                     Iniciar Sesión
                   </button>
                   <button
                     onClick={() => { cerrarMenu(); onOpenRegister(); }}
-                    className="block w-full rounded-full bg-tertiary px-6 py-2.5 text-center font-sans text-xs font-semibold uppercase tracking-wide text-linen shadow-md"
+                    className={`block w-full rounded-full px-6 py-2.5 text-center font-sans text-xs font-semibold uppercase tracking-wide shadow-md transition-colors ${scrolled ? 'bg-cafe-noir text-linen hover:bg-tertiary' : 'bg-tertiary text-linen hover:bg-cafe-noir'}`}
                   >
                     Registrarme
                   </button>

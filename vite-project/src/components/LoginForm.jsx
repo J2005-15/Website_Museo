@@ -32,9 +32,9 @@ function LoginForm({ isOpen, onClose }) {
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-[#3a200d]/50 backdrop-blur-md">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-[#3a200d]/50 backdrop-blur-md" style={{ overflowY: 'auto' }}>
       <div 
-        className="relative w-full max-w-md rounded-[2rem] bg-[#F4F0E6] shadow-2xl shadow-black/50 p-8 sm:p-10 text-center"
+        className="relative w-full max-w-md rounded-[2rem] bg-[#F4F0E6] shadow-2xl shadow-black/50 p-6 sm:p-10 my-8 text-center"
         style={configWeb?.login_imagen ? {
           backgroundImage: `linear-gradient(rgba(244, 240, 230, 0.92), rgba(244, 240, 230, 0.92)), url(${configWeb.login_imagen})`,
           backgroundSize: 'cover',
