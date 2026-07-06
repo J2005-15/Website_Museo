@@ -60,6 +60,20 @@ export async function subirCedulaCultorRequest(idCultor, archivo) {
   }
 }
 
+export async function subirDocumentosSoporteRequest(idCultor, archivos) {
+  try {
+    const formData = new FormData()
+    archivos.forEach(file => formData.append('archivos', file))
+    formData.append('id_cultor', idCultor)
+
+    const response = await axios.post(`${API_URL}/documentos_cultor/subir-soporte`, formData)
+    return response.data
+  } catch (error) {
+    const errorMsg = error.response?.data?.error || error.response?.data?.message || 'Error al subir documentos de soporte'
+    throw new Error(errorMsg, { cause: error })
+  }
+}
+
 // Notificaciones reales del cultor logueado (GET /api/notificaciones, requireAuth).
 export async function getNotificacionesRequest(token) {
   try {

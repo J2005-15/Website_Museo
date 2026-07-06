@@ -7,19 +7,28 @@ import Textarea from './form/Textarea'
 import Dropzone from './form/Dropzone'
 import Checkbox from './form/Checkbox'
 import Radio from './form/Radio'
-import { postularCultorRequest, subirCedulaCultorRequest, validarCedulaRequest, getParroquiasByMunicipioRequest, getMunicipiosRequest, getOficiosRequest } from '../services/api'
+import { postularCultorRequest, validarCedulaRequest, subirCedulaCultorRequest, subirDocumentosSoporteRequest, getParroquiasByMunicipioRequest, getMunicipiosRequest, getOficiosRequest } from '../services/api'
 
 const generos = ['Femenino', 'Masculino', 'Otro']
 
 const funcionalidades = ['Utilitaria', 'Decorativa', 'Ceremonial']
 
 const recaudosRequeridos = [
-  'Copia de la cédula de identidad',
   'Resumen curricular del oficio',
   'Fotografías del proceso productivo',
   'Fotografías de las obras terminadas',
   'Constancia de residencia',
+  'Certificado (si cuenta con el)',
 ]
+
+function arrayBufferToBase64(buffer) {
+  const bytes = new Uint8Array(buffer)
+  let binary = ''
+  for (let i = 0; i < bytes.length; i++) {
+    binary += String.fromCharCode(bytes[i])
+  }
+  return btoa(binary)
+}
 
 const prefijosCedula = ['V', 'E']
 const prefijosTelefono = ['0414', '0424', '0416', '0426', '0412', '0422', '0276']
@@ -228,6 +237,7 @@ function RegisterForm({ isOpen, onClose }) {
 
   const handleSubmit = async (event) => {
     event.preventDefault()
+    console.log('🎯 handleSubmit EJECUTADO', new Date().toISOString())
     setSubmitError('')
     setDocumentoUploadError('')
     setOcrErrores({})
@@ -237,11 +247,18 @@ function RegisterForm({ isOpen, onClose }) {
       return
     }
 
-    const archivo = archivoCedula[0]
+    const archivoCedulaFile = archivoCedula[0]
     setIsSubmitting(true)
 
     try {
-      const resultado = await validarCedulaRequest(archivo)
+      // Leer cédula a ArrayBuffer: necesitamos los datos para OCR y para base64
+      const cedulaBuffer = await archivoCedulaFile.arrayBuffer()
+      const cedulaNombre = archivoCedulaFile.name
+      const cedulaTipo = archivoCedulaFile.type
+
+      // OCR validation (usa multipart, funciona bien)
+      const archivoOcr = new File([cedulaBuffer], cedulaNombre, { type: cedulaTipo })
+      const resultado = await validarCedulaRequest(archivoOcr)
       setDatosOcr(resultado)
 
       const erroresOcr = validarOcrContraFormulario(resultado)
@@ -262,12 +279,15 @@ function RegisterForm({ isOpen, onClose }) {
       if (telefonoNumero) {
         payload.telefono_contacto = `${telefonoPrefijo}-${telefonoNumero}`
       }
-      const respuesta = await postularCultorRequest(payload)
 
-      try {
-        await subirCedulaCultorRequest(respuesta.id_cultor, archivo)
-      } catch {
-        setDocumentoUploadError('Postulación enviada con éxito, pero hubo un error al cargar el documento de identidad.')
+      const cultorCreado = await postularCultorRequest(payload)
+      const idCultor = cultorCreado.id_cultor
+
+      if (idCultor) {
+        await subirCedulaCultorRequest(idCultor, archivoCedulaFile)
+        if (archivos.length > 0) {
+          await subirDocumentosSoporteRequest(idCultor, archivos)
+        }
       }
 
       setForm(initialFormState)
@@ -394,7 +414,7 @@ function RegisterForm({ isOpen, onClose }) {
                     required
                     inputMode="numeric"
                     value={cedulaNumero}
-                    onChange={(e) => { setCedulaNumero(e.target.value.replace(/\D/g, '')); setOcrErrores((prev) => { const n = { ...prev }; delete n.cedula; return n }) }}
+                    onChange={(e) => { setCedulaNumero(e.target.value.replace(/\D/g, '').slice(0, 8)); setOcrErrores((prev) => { const n = { ...prev }; delete n.cedula; return n }) }}
                     placeholder="12345678"
                     className="flex-1 border-none outline-none focus:ring-0 bg-transparent py-2.5 pr-4 font-sans text-sm text-cafe-noir placeholder:text-cafe-noir/30"
                   />
