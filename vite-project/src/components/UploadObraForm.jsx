@@ -1,10 +1,6 @@
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { useAuth } from '../context/AuthContext'
-import { postularObraRequest, subirMultimediaObraRequest } from '../services/api'
-
-const TIPOS_PATRIMONIO = [
-  'Cestería', 'Cerámica', 'Talla en madera', 'Textiles', 'Pintura', 'Orfebrería', 'Cuero', 'Otro'
-]
+import { postularObraRequest, getCategoriasRequest } from '../services/api'
 
 function UploadObraForm({ isOpen, onClose, onObraEnviada }) {
   const { user } = useAuth()
@@ -13,13 +9,28 @@ function UploadObraForm({ isOpen, onClose, onObraEnviada }) {
   const [errorEnvio, setErrorEnvio] = useState('')
 
   const [titulo, setTitulo] = useState('')
-  const [tipoPatrimonio, setTipoPatrimonio] = useState(TIPOS_PATRIMONIO[0])
+  // Categorías reales de la BD (tabla categorias_obra), no una lista fija. idCategoria
+  // guarda el id seleccionado; tipo_patrimonio se sigue mandando en el payload (mismo
+  // campo que ya usa toda la web pública para mostrar la categoría), tomando el nombre
+  // real de la categoría elegida.
+  const [categoriasList, setCategoriasList] = useState([])
+  const [idCategoria, setIdCategoria] = useState('')
   const [anio, setAnio] = useState(new Date().getFullYear())
   const [descripcion, setDescripcion] = useState('')
   const [tecnica, setTecnica] = useState('')
   const [archivoImagen, setArchivoImagen] = useState(null)
   const [previsualizacion, setPrevisualizacion] = useState(null)
   const fileInputRef = useRef(null)
+
+  useEffect(() => {
+    if (!isOpen) return
+    getCategoriasRequest()
+      .then((categorias) => {
+        setCategoriasList(categorias)
+        setIdCategoria((prev) => prev || (categorias[0]?.id_categoria ?? ''))
+      })
+      .catch(() => setCategoriasList([]))
+  }, [isOpen])
 
   if (!isOpen) return null
 
@@ -35,23 +46,31 @@ function UploadObraForm({ isOpen, onClose, onObraEnviada }) {
   const handleSubmit = async (e) => {
     e.preventDefault()
     setErrorEnvio('')
+
+    // La fotografía es obligatoria: sin ella no tiene sentido enviar la obra (el
+    // backend también lo exige, esto solo evita el viaje de red innecesario).
+    if (!archivoImagen) {
+      setErrorEnvio('Debes adjuntar una fotografía de la obra para enviarla.')
+      return
+    }
+
     setEnviando(true)
 
     try {
-      const nuevaObra = await postularObraRequest({
-        titulo,
-        tipo_patrimonio: tipoPatrimonio,
-        descripcion_historica: descripcion,
-        tecnica_utilizada: tecnica,
-      }, user.token)
+      // Los datos de la obra y su fotografía se envían juntos en UNA sola petición
+      // multipart: el backend crea la obra SOLO si la imagen se guarda correctamente
+      // (todo o nada, ver obrasController.create). Si algo falla, no se crea ninguna
+      // obra huérfana sin foto.
+      const categoriaSeleccionada = categoriasList.find(c => String(c.id_categoria) === String(idCategoria))
+      const formData = new FormData()
+      formData.append('titulo', titulo)
+      if (idCategoria) formData.append('id_categoria', idCategoria)
+      if (categoriaSeleccionada?.nombre) formData.append('tipo_patrimonio', categoriaSeleccionada.nombre)
+      formData.append('descripcion_historica', descripcion)
+      formData.append('tecnica_utilizada', tecnica)
+      formData.append('archivo', archivoImagen)
 
-      if (archivoImagen && nuevaObra?.id_obra) {
-        const fd = new FormData()
-        fd.append('archivo', archivoImagen)
-        fd.append('id_obra', nuevaObra.id_obra)
-        fd.append('tipo_archivo', 'imagen')
-        await subirMultimediaObraRequest(fd, user.token)
-      }
+      await postularObraRequest(formData, user.token)
 
       setEnviado(true)
       if (onObraEnviada) onObraEnviada()
@@ -59,7 +78,7 @@ function UploadObraForm({ isOpen, onClose, onObraEnviada }) {
       setTimeout(() => {
         setEnviado(false)
         setTitulo(''); setDescripcion(''); setTecnica('')
-        setTipoPatrimonio(TIPOS_PATRIMONIO[0])
+        setIdCategoria(categoriasList[0]?.id_categoria ?? '')
         setAnio(new Date().getFullYear())
         setArchivoImagen(null); setPrevisualizacion(null)
         onClose()
@@ -127,8 +146,9 @@ function UploadObraForm({ isOpen, onClose, onObraEnviada }) {
                     <label className="block font-sans text-xs font-semibold uppercase tracking-wide text-cafe-noir mb-2">
                       Tipo de Patrimonio
                     </label>
-                    <select value={tipoPatrimonio} onChange={(e) => setTipoPatrimonio(e.target.value)} className="w-full rounded-xl border border-cafe-noir/20 bg-white/60 px-4 py-3 font-sans text-sm shadow-sm focus:border-tertiary focus:outline-none focus:ring-1 focus:ring-tertiary">
-                      {TIPOS_PATRIMONIO.map(t => <option key={t}>{t}</option>)}
+                    <select value={idCategoria} onChange={(e) => setIdCategoria(e.target.value)} className="w-full rounded-xl border border-cafe-noir/20 bg-white/60 px-4 py-3 font-sans text-sm shadow-sm focus:border-tertiary focus:outline-none focus:ring-1 focus:ring-tertiary">
+                      {categoriasList.length === 0 && <option value="">Sin categorías disponibles</option>}
+                      {categoriasList.map(c => <option key={c.id_categoria} value={c.id_categoria}>{c.nombre}</option>)}
                     </select>
                   </div>
                   <div>
@@ -155,7 +175,7 @@ function UploadObraForm({ isOpen, onClose, onObraEnviada }) {
 
                 <div>
                   <label className="block font-sans text-xs font-semibold uppercase tracking-wide text-cafe-noir mb-2">
-                    Fotografía de la obra
+                    Fotografía de la obra <span className="text-red-600">* Obligatorio</span>
                   </label>
                   <div
                     className="mt-1 flex justify-center rounded-xl border-2 border-dashed border-cafe-noir/30 px-6 pt-5 pb-6 bg-white/40 hover:bg-white/60 transition-colors cursor-pointer overflow-hidden"

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Eye, EyeOff, AlertTriangle, ShieldCheck } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
-import { getMiPerfilRequest, getMisObrasRequest, updateMiPerfilRequest, appendCurriculumRequest, changePasswordRequest, updateProfileRequest, subirFotoPerfilRequest } from '../services/api'
+import { getMiPerfilRequest, getMisObrasRequest, updateMiPerfilRequest, appendCurriculumRequest, changePasswordRequest, updateProfileRequest, subirFotoPerfilRequest, reemplazarFotoObraRequest } from '../services/api'
 
 const estadoEstilos = {
   aprobado: 'bg-emerald-100 text-emerald-600 border-emerald-200/50',
@@ -67,6 +67,10 @@ function CultorDashboard({ isOpen, onClose, onOpenUpload, initialTab }) {
   const [fotoUploading, setFotoUploading] = useState(false)
   const [fotoError, setFotoError] = useState('')
   const [fotoSuccess, setFotoSuccess] = useState('')
+
+  // Foto de una obra (reemplazo desde "Mis Obras")
+  const [fotoObraUploadingId, setFotoObraUploadingId] = useState(null)
+  const [fotoObraError, setFotoObraError] = useState('')
 
   // Obras reales del cultor logueado
   const [misObras, setMisObras] = useState([])
@@ -195,6 +199,24 @@ function CultorDashboard({ isOpen, onClose, onOpenUpload, initialTab }) {
     }
   }
 
+  // Reemplaza la foto de una de "mis obras" (autoservicio, solo sobre obras propias —
+  // el backend valida la propiedad). Actualiza la miniatura en la tabla al instante.
+  const handleObraFotoUpload = async (idObra, file) => {
+    if (!file) return
+    setFotoObraUploadingId(idObra)
+    setFotoObraError('')
+    try {
+      const nuevaImagen = await reemplazarFotoObraRequest(idObra, file, user.token)
+      setMisObras((prev) => prev.map((o) => (
+        o.id_obra === idObra ? { ...o, multimedia: [nuevaImagen] } : o
+      )))
+    } catch (err) {
+      setFotoObraError(err.message)
+    } finally {
+      setFotoObraUploadingId(null)
+    }
+  }
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-[#3a200d]/90 backdrop-blur-md">
       <style>{`
@@ -268,6 +290,12 @@ function CultorDashboard({ isOpen, onClose, onOpenUpload, initialTab }) {
                     Mis obras enviadas
                   </span>
 
+                  {fotoObraError && (
+                    <div className="rounded-xl border border-red-200/50 bg-red-50/60 px-4 py-3 font-sans text-sm text-red-700">
+                      {fotoObraError}
+                    </div>
+                  )}
+
                   {obrasLoading ? (
                     <div className="rounded-2xl border border-cafe-noir/10 bg-white/50 px-6 py-10 text-center">
                       <p className="font-sans text-sm text-cafe-noir/60">Cargando tus obras...</p>
@@ -277,6 +305,7 @@ function CultorDashboard({ isOpen, onClose, onOpenUpload, initialTab }) {
                       <table className="w-full min-w-max text-left">
                         <thead>
                           <tr className="border-b border-cafe-noir/10">
+                            <th className="px-5 py-3 font-sans text-xs font-semibold uppercase tracking-wide text-cafe-noir/70">Foto</th>
                             <th className="px-5 py-3 font-sans text-xs font-semibold uppercase tracking-wide text-cafe-noir/70">Obra</th>
                             <th className="px-5 py-3 font-sans text-xs font-semibold uppercase tracking-wide text-cafe-noir/70">Tipo</th>
                             <th className="px-5 py-3 font-sans text-xs font-semibold uppercase tracking-wide text-cafe-noir/70">Código</th>
@@ -286,6 +315,31 @@ function CultorDashboard({ isOpen, onClose, onOpenUpload, initialTab }) {
                         <tbody>
                           {misObras.map((obra) => (
                             <tr key={obra.id_obra} className="border-b border-cafe-noir/5 last:border-0">
+                              <td className="px-5 py-4">
+                                <div className="flex items-center gap-3">
+                                  <div className="h-12 w-12 shrink-0 overflow-hidden rounded-lg bg-cafe-noir/5 flex items-center justify-center">
+                                    {obra.multimedia?.[0]?.url_archivo ? (
+                                      <img src={obra.multimedia[0].url_archivo} alt={obra.titulo} className="h-full w-full object-cover" />
+                                    ) : (
+                                      <span className="font-sans text-[9px] text-cafe-noir/40 text-center px-1">Sin foto</span>
+                                    )}
+                                  </div>
+                                  <label className="cursor-pointer whitespace-nowrap font-sans text-[11px] font-semibold uppercase tracking-wide text-tertiary hover:opacity-70">
+                                    {fotoObraUploadingId === obra.id_obra ? 'Subiendo...' : 'Cambiar'}
+                                    <input
+                                      type="file"
+                                      accept="image/jpeg,image/png,image/webp"
+                                      className="hidden"
+                                      disabled={fotoObraUploadingId === obra.id_obra}
+                                      onChange={(e) => {
+                                        const file = e.target.files?.[0]
+                                        if (file) handleObraFotoUpload(obra.id_obra, file)
+                                        e.target.value = ''
+                                      }}
+                                    />
+                                  </label>
+                                </div>
+                              </td>
                               <td className="px-5 py-4 font-sans text-sm font-medium text-cafe-noir capitalize">{obra.titulo}</td>
                               <td className="px-5 py-4 font-sans text-sm text-cafe-noir/80">{obra.tipo_patrimonio || '—'}</td>
                               <td className="px-5 py-4 font-sans text-sm text-cafe-noir/60">{obra.codigo_qr_link || '—'}</td>
@@ -381,6 +435,7 @@ function CultorDashboard({ isOpen, onClose, onOpenUpload, initialTab }) {
                               telefono_contacto: perfil.telefono_contacto || '',
                               correo_contacto: perfil.correo_contacto || '',
                               direccion_residencia: perfil.direccion_residencia || '',
+                              mostrar_contacto_publico: !!perfil.mostrar_contacto_publico,
                             })
                             setEditandoPerfil(true)
                             setEditError('')
@@ -411,8 +466,11 @@ function CultorDashboard({ isOpen, onClose, onOpenUpload, initialTab }) {
                           try {
                             const payload = {}
                             for (const key of Object.keys(editForm)) {
-                              if (editForm[key] !== (perfil[key] || '')) {
-                                payload[key] = editForm[key] || null
+                              const valorNuevo = editForm[key]
+                              if (typeof valorNuevo === 'boolean') {
+                                if (valorNuevo !== !!perfil[key]) payload[key] = valorNuevo
+                              } else if (valorNuevo !== (perfil[key] || '')) {
+                                payload[key] = valorNuevo || null
                               }
                             }
                             if (Object.keys(payload).length > 0) {
@@ -473,6 +531,20 @@ function CultorDashboard({ isOpen, onClose, onOpenUpload, initialTab }) {
                             <label className="block font-sans text-xs font-semibold uppercase tracking-wide text-cafe-noir mb-1">Dirección</label>
                             <textarea name="direccion_residencia" value={editForm.direccion_residencia || ''} onChange={(e) => setEditForm((prev) => ({ ...prev, direccion_residencia: e.target.value }))} rows={2} className="w-full rounded-xl border border-cafe-noir/20 bg-white/70 px-3 py-2 font-sans text-sm focus:border-tertiary focus:outline-none focus:ring-1 focus:ring-tertiary resize-none" />
                           </div>
+                          <div className="sm:col-span-2">
+                            <label className="flex items-center gap-2.5 font-sans text-xs font-semibold uppercase tracking-wide text-cafe-noir cursor-pointer select-none">
+                              <input
+                                type="checkbox"
+                                checked={!!editForm.mostrar_contacto_publico}
+                                onChange={(e) => setEditForm((prev) => ({ ...prev, mostrar_contacto_publico: e.target.checked }))}
+                                className="h-4 w-4 rounded border-cafe-noir/30 text-tertiary focus:ring-tertiary"
+                              />
+                              Mostrar mi teléfono y correo en mi perfil público
+                            </label>
+                            <p className="mt-1 font-sans text-[11px] font-normal normal-case text-cafe-noir/50">
+                              Si lo activas, cualquier visitante del directorio público podrá ver tu teléfono y correo de contacto para escribirte.
+                            </p>
+                          </div>
                         </div>
                         <div className="flex justify-end gap-3 pt-2">
                           <button
@@ -516,6 +588,10 @@ function CultorDashboard({ isOpen, onClose, onOpenUpload, initialTab }) {
                         <div>
                           <p className="font-sans text-[11px] uppercase tracking-wide text-cafe-noir/50">Correo de contacto</p>
                           <p className="mt-1 font-sans text-sm text-cafe-noir">{perfil?.correo_contacto || user.correo || '—'}</p>
+                        </div>
+                        <div>
+                          <p className="font-sans text-[11px] uppercase tracking-wide text-cafe-noir/50">Contacto público</p>
+                          <p className="mt-1 font-sans text-sm text-cafe-noir">{perfil?.mostrar_contacto_publico ? 'Visible en el directorio' : 'Oculto'}</p>
                         </div>
                         {perfil?.seudonimo && (
                           <div>

@@ -40,7 +40,7 @@ function Footer() {
         <div className="absolute inset-0 bg-cafe-noir/85" />
       </div>
 
-      <div className="relative z-10 mx-auto grid max-w-5xl grid-cols-1 gap-x-10 gap-y-8 px-4 pt-12 pb-8 sm:px-6 sm:pt-16 md:grid-cols-2 lg:grid-cols-4">
+      <div className="relative z-10 mx-auto grid max-w-5xl grid-cols-1 gap-x-10 gap-y-8 px-4 pt-12 pb-8 sm:px-6 sm:pt-16 md:grid-cols-2 lg:grid-cols-3">
         <div>
           <h4 className="text-xs uppercase tracking-widest text-[#F4F0E6]">
             Contacto
@@ -71,10 +71,8 @@ function Footer() {
               </>
             )}
           </div>
-        </div>
 
-        <div>
-          <h4 className="text-xs uppercase tracking-widest text-[#F4F0E6]">
+          <h4 className="mt-6 text-xs uppercase tracking-widest text-[#F4F0E6]">
             Apoyado por
           </h4>
           <ul className="mt-3 space-y-2">
@@ -103,7 +101,7 @@ function Footer() {
             Realizado por
           </h4>
           <p className="mt-2 font-sans text-sm italic text-[#F4F0E6]/60">
-            Estudiantes de la UNEFA de la carrera Ing. de Sistemas
+            Estudiantes De la UNEFA - Carrera Ing. De Sistemas
           </p>
           <ul className="mt-3 space-y-2">
             {equipoDesarrollo.map((nombre) => (

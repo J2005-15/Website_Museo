@@ -7,7 +7,7 @@ import Textarea from './form/Textarea'
 import Dropzone from './form/Dropzone'
 import Checkbox from './form/Checkbox'
 import Radio from './form/Radio'
-import { postularCultorRequest, validarCedulaRequest, subirCedulaCultorRequest, subirDocumentosSoporteRequest, getParroquiasByMunicipioRequest, getMunicipiosRequest, getOficiosRequest } from '../services/api'
+import { postularCultorRequest, validarCedulaRequest, getParroquiasByMunicipioRequest, getMunicipiosRequest, getOficiosRequest } from '../services/api'
 
 const generos = ['Femenino', 'Masculino', 'Otro']
 
@@ -90,7 +90,6 @@ function RegisterForm({ isOpen, onClose }) {
   const [enviado, setEnviado] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState('')
-  const [documentoUploadError, setDocumentoUploadError] = useState('')
   const [ocrErrores, setOcrErrores] = useState({})
   const [datosOcr, setDatosOcr] = useState(null)
 
@@ -237,10 +236,22 @@ function RegisterForm({ isOpen, onClose }) {
 
   const handleSubmit = async (event) => {
     event.preventDefault()
-    console.log('🎯 handleSubmit EJECUTADO', new Date().toISOString())
     setSubmitError('')
-    setDocumentoUploadError('')
     setOcrErrores({})
+
+    // Validación manual de obligatorios: el formulario usa noValidate porque el modal
+    // tiene scroll propio y el aviso nativo del navegador ("completa este campo") puede
+    // quedar fuera de la vista, dando la impresión de que el botón "no hace nada".
+    const camposFaltantes = []
+    if (!form.primer_nombre.trim()) camposFaltantes.push('Primer nombre')
+    if (!form.primer_apellido.trim()) camposFaltantes.push('Primer apellido')
+    if (!cedulaNumero) camposFaltantes.push('Número de cédula')
+    if (!form.fecha_nacimiento) camposFaltantes.push('Fecha de nacimiento')
+    if (!camposVisuales.municipio) camposFaltantes.push('Municipio de residencia')
+    if (camposFaltantes.length > 0) {
+      setSubmitError(`Completa los siguientes campos obligatorios: ${camposFaltantes.join(', ')}.`)
+      return
+    }
 
     if (archivoCedula.length === 0) {
       setSubmitError('Debes adjuntar la foto o documento de tu cédula para validar tu identidad.')
@@ -269,26 +280,26 @@ function RegisterForm({ isOpen, onClose }) {
         return
       }
 
-      const payload = {
-        ...Object.fromEntries(
-          Object.entries(form).filter(([, valor]) => valor !== '')
-        ),
-        cedula: `${cedulaPrefijo}-${cedulaNumero}`,
-        esta_certificado: estaCertificado,
-      }
+      // La cédula ya fue validada por OCR arriba. Ahora se envían los datos del
+      // formulario JUNTO con el archivo de cédula (obligatorio) y los soportes
+      // (opcionales, si el cultor adjuntó alguno) en UNA sola petición multipart: el
+      // backend crea el cultor SOLO si todos los documentos adjuntados se guardan
+      // correctamente (todo o nada, ver cultoresController.create). Si algo falla, no
+      // se crea nada y este catch de abajo muestra el error — no existe ya un estado
+      // intermedio de "postulación creada pero sin documento".
+      const formData = new FormData()
+      Object.entries(form).forEach(([campo, valor]) => {
+        if (valor !== '') formData.append(campo, valor)
+      })
+      formData.append('cedula', `${cedulaPrefijo}-${cedulaNumero}`)
+      formData.append('esta_certificado', estaCertificado)
       if (telefonoNumero) {
-        payload.telefono_contacto = `${telefonoPrefijo}-${telefonoNumero}`
+        formData.append('telefono_contacto', `${telefonoPrefijo}-${telefonoNumero}`)
       }
+      formData.append('archivo_cedula', archivoCedulaFile)
+      archivos.forEach((archivo) => formData.append('archivos_soporte', archivo))
 
-      const cultorCreado = await postularCultorRequest(payload)
-      const idCultor = cultorCreado.id_cultor
-
-      if (idCultor) {
-        await subirCedulaCultorRequest(idCultor, archivoCedulaFile)
-        if (archivos.length > 0) {
-          await subirDocumentosSoporteRequest(idCultor, archivos)
-        }
-      }
+      await postularCultorRequest(formData)
 
       setForm(initialFormState)
       setCamposVisuales(initialCamposVisualesState)
@@ -349,7 +360,7 @@ function RegisterForm({ isOpen, onClose }) {
         </div>
 
         <div className="mt-10">
-          <form onSubmit={handleSubmit} className="space-y-14">
+          <form onSubmit={handleSubmit} noValidate className="space-y-14">
           {/* Sección I: Datos Personales */}
           <div className="space-y-0">
             <SectionTitle>I. Datos Personales</SectionTitle>
@@ -429,6 +440,8 @@ function RegisterForm({ isOpen, onClose }) {
                 required
                 value={form.fecha_nacimiento}
                 onChange={handleChange}
+                min="1900-01-01"
+                max={new Date().toISOString().split('T')[0]}
               />
               <SelectInput
                 label="Género"
@@ -738,15 +751,9 @@ function RegisterForm({ isOpen, onClose }) {
             correo electrónico proporcionado.
           </p>
 
-          {documentoUploadError && (
-            <p className="mt-4 rounded-xl border border-amber-300/60 bg-amber-50 px-4 py-3 text-left font-sans text-sm text-amber-800">
-              {documentoUploadError}
-            </p>
-          )}
-
           <button
             type="button"
-            onClick={() => { setEnviado(false); setDocumentoUploadError('') }}
+            onClick={() => setEnviado(false)}
             className="mt-8 w-full rounded-full bg-cafe-noir px-6 py-3 font-sans text-sm font-semibold uppercase tracking-wider text-white shadow-md transition-opacity hover:opacity-80"
           >
             Aceptar

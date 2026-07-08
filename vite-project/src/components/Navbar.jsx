@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { useAuth } from '../context/AuthContext'
 import { getNotificacionesRequest, marcarNotificacionesLeidasRequest, marcarNotificacionLeidaRequest, getMiPerfilRequest } from '../services/api'
+import { socket } from '../services/socket'
 import logoM from '../assets/LogoM.png'
 
 // Icono y color por `tipo` de notificación (los únicos valores que entrega el backend:
@@ -62,6 +63,20 @@ function Navbar({ onOpenRegister, onOpenLogin, onOpenPanel }) {
     getMiPerfilRequest(user.token)
       .then((perfil) => setFotoPerfil(perfil.foto_perfil || null))
       .catch(() => setFotoPerfil(null))
+  }, [user])
+
+  // Refresca las notificaciones en tiempo real (ej. "Obra recibida" al postular, o
+  // "Obra aprobada/rechazada" al revisarla) sin depender de recargar la página o
+  // reabrir manualmente el dropdown de la campanita.
+  useEffect(() => {
+    if (!user) return
+    const reFetch = () => {
+      getNotificacionesRequest(user.token)
+        .then(setNotificaciones)
+        .catch(() => {})
+    }
+    socket.on('admin:update', reFetch)
+    return () => { socket.off('admin:update', reFetch) }
   }, [user])
 
   const marcarLeidas = async () => {

@@ -2,7 +2,6 @@ import { useState, useEffect, useRef } from 'react'
 import { Routes, Route } from 'react-router-dom'
 import { AuthProvider, useAuth } from './context/AuthContext'
 import { ConfigProvider } from './context/ConfigContext'
-import { socket } from './services/socket'
 import Navbar from './components/Navbar'
 import Hero from './components/Hero'
 import About from './components/About'
@@ -39,13 +38,8 @@ function HomePage({ autoOpenLogin = false }) {
   }, [])
 
   useEffect(() => {
-    socket.on('admin:update', () => window.location.reload())
-    return () => { socket.off('admin:update') }
-  }, [])
-
-  useEffect(() => {
     if (prevUser.current !== user) {
-      window.location.reload()
+      window.scrollTo({ top: 0, behavior: 'smooth' })
     }
     prevUser.current = user
   }, [user])

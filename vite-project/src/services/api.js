@@ -157,6 +157,19 @@ export async function getOficiosRequest() {
   }
 }
 
+// Lista de categorías de obra (ruta pública, sin auth). Usada por el selector de
+// "Tipo de Patrimonio" en UploadObraForm.jsx, para que muestre las categorías reales
+// de la base de datos en vez de una lista fija.
+export async function getCategoriasRequest() {
+  try {
+    const response = await axios.get(`${API_URL}/categorias_obra`)
+    return response.data
+  } catch (error) {
+    const errorMsg = error.response?.data?.error || error.response?.data?.message || 'Error al obtener las categorías'
+    throw new Error(errorMsg, { cause: error })
+  }
+}
+
 // Login real del cultor (POST /api/auth/login). Devuelve { message, user, token }.
 export async function loginRequest(correo, password) {
   try {
@@ -223,7 +236,10 @@ export async function getMiPerfilRequest(token) {
 // el backend. Misma ruta pública que usa el panel admin.
 export async function olvidePasswordRequest(correo) {
   try {
-    const response = await axios.post(`${API_URL}/auth/olvide-password`, { correo })
+    // Este sitio solo recupera cuentas de cultor (mismo criterio que loginRequest) —
+    // así no se toca por error la cuenta de administrador de alguien que comparte el
+    // mismo correo con su cuenta de cultor.
+    const response = await axios.post(`${API_URL}/auth/olvide-password`, { correo, portal: 'publico' })
     return response.data
   } catch (error) {
     const errorMsg = error.response?.data?.error || error.response?.data?.message || 'Error al solicitar recuperación'
@@ -285,6 +301,22 @@ export async function postularObraRequest(data, token) {
     return response.data
   } catch (error) {
     const errorMsg = error.response?.data?.error || error.response?.data?.message || 'Error al enviar la obra'
+    throw new Error(errorMsg, { cause: error })
+  }
+}
+
+// Reemplaza la fotografía de una obra ya existente del cultor logueado (autoservicio,
+// solo sobre sus propias obras — el backend valida la propiedad).
+export async function reemplazarFotoObraRequest(idObra, archivo, token) {
+  try {
+    const formData = new FormData()
+    formData.append('archivo', archivo)
+    const response = await axios.post(`${API_URL}/obras/${idObra}/foto`, formData, {
+      headers: { Authorization: `Bearer ${token}` }
+    })
+    return response.data
+  } catch (error) {
+    const errorMsg = error.response?.data?.error || error.response?.data?.message || 'Error al reemplazar la fotografía'
     throw new Error(errorMsg, { cause: error })
   }
 }
