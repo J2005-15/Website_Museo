@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Eye, EyeOff, AlertTriangle, ShieldCheck } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
-import { getMiPerfilRequest, getMisObrasRequest, updateMiPerfilRequest, appendCurriculumRequest, changePasswordRequest, updateProfileRequest, subirFotoPerfilRequest, reemplazarFotoObraRequest } from '../services/api'
+import { getMiPerfilRequest, getMisObrasRequest, updateMiPerfilRequest, appendCurriculumRequest, changePasswordRequest, updateProfileRequest, subirFotoPerfilRequest, eliminarFotoPerfilRequest, reemplazarFotoObraRequest, actualizarMiObraRequest } from '../services/api'
 
 const estadoEstilos = {
   aprobado: 'bg-emerald-100 text-emerald-600 border-emerald-200/50',
@@ -65,16 +65,27 @@ function CultorDashboard({ isOpen, onClose, onOpenUpload, initialTab }) {
 
   // Foto de perfil
   const [fotoUploading, setFotoUploading] = useState(false)
+  const [fotoDeleting, setFotoDeleting] = useState(false)
   const [fotoError, setFotoError] = useState('')
   const [fotoSuccess, setFotoSuccess] = useState('')
 
   // Foto de una obra (reemplazo desde "Mis Obras")
-  const [fotoObraUploadingId, setFotoObraUploadingId] = useState(null)
-  const [fotoObraError, setFotoObraError] = useState('')
+
+  // Edición del contenido de una obra propia (todo excepto categoría), incluida su foto
+  const [editandoObraId, setEditandoObraId] = useState(null)
+  const [editObraForm, setEditObraForm] = useState(null)
+  const [editObraSaving, setEditObraSaving] = useState(false)
+  const [editObraError, setEditObraError] = useState('')
+  const [obraGuardadaMensaje, setObraGuardadaMensaje] = useState('')
+  const [editObraFotoActual, setEditObraFotoActual] = useState(null)
+  const [editObraFotoFile, setEditObraFotoFile] = useState(null)
+  const [editObraFotoPreview, setEditObraFotoPreview] = useState(null)
 
   // Obras reales del cultor logueado
   const [misObras, setMisObras] = useState([])
   const [obrasLoading, setObrasLoading] = useState(false)
+  const [obrasPage, setObrasPage] = useState(1)
+  const obrasPorPagina = 10
 
   // Sincroniza la pestaña activa cuando el navbar abre el panel en una pestaña específica
   // (ajuste de estado durante el render, en vez de un efecto, para evitar un commit extra)
@@ -109,6 +120,7 @@ function CultorDashboard({ isOpen, onClose, onOpenUpload, initialTab }) {
   useEffect(() => {
     if (!isOpen || !user) return
     setObrasLoading(true)
+    setObrasPage(1)
     getMisObrasRequest(user.token)
       .then((data) => {
         // Filtramos en cliente las que pertenecen al cultor del perfil si el backend retorna todas
@@ -131,6 +143,9 @@ function CultorDashboard({ isOpen, onClose, onOpenUpload, initialTab }) {
   const totalObras = misObras.length
   const obrasAprobadas = misObras.filter((o) => o.estatus === 'aprobado').length
   const obrasEnRevision = misObras.filter((o) => o.estatus === 'pendiente').length
+
+  const totalPaginasObras = Math.ceil(misObras.length / obrasPorPagina)
+  const obrasPaginadas = misObras.slice((obrasPage - 1) * obrasPorPagina, obrasPage * obrasPorPagina)
 
 
   const handlePasswordChange = (e) => {
@@ -199,21 +214,90 @@ function CultorDashboard({ isOpen, onClose, onOpenUpload, initialTab }) {
     }
   }
 
-  // Reemplaza la foto de una de "mis obras" (autoservicio, solo sobre obras propias —
-  // el backend valida la propiedad). Actualiza la miniatura en la tabla al instante.
-  const handleObraFotoUpload = async (idObra, file) => {
-    if (!file) return
-    setFotoObraUploadingId(idObra)
-    setFotoObraError('')
+  const handleFotoDelete = async () => {
+    setFotoDeleting(true)
+    setFotoError('')
+    setFotoSuccess('')
     try {
-      const nuevaImagen = await reemplazarFotoObraRequest(idObra, file, user.token)
-      setMisObras((prev) => prev.map((o) => (
-        o.id_obra === idObra ? { ...o, multimedia: [nuevaImagen] } : o
-      )))
+      await eliminarFotoPerfilRequest(user.token)
+      setPerfil((prev) => prev ? { ...prev, foto_perfil: null } : null)
+      setFotoSuccess('Foto de perfil eliminada.')
     } catch (err) {
-      setFotoObraError(err.message)
+      setFotoError(err.message)
     } finally {
-      setFotoObraUploadingId(null)
+      setFotoDeleting(false)
+    }
+  }
+
+  const handleAbrirEditarObra = (obra) => {
+    setEditandoObraId(obra.id_obra)
+    setEditObraError('')
+    setEditObraFotoActual(obra.multimedia?.[0]?.url_archivo || null)
+    setEditObraFotoFile(null)
+    setEditObraFotoPreview(null)
+    setEditObraForm({
+      titulo: obra.titulo || '',
+      descripcion_historica: obra.descripcion_historica || '',
+      materiales_utilizados: obra.materiales_utilizados || '',
+      tecnica_utilizada: obra.tecnica_utilizada || '',
+      anio_creacion: obra.anio_creacion || '',
+      dimensiones: obra.dimensiones || '',
+      peso: obra.peso || '',
+      tiempo_ejecucion: obra.tiempo_ejecucion || '',
+      significado_cultural: obra.significado_cultural || '',
+    })
+  }
+
+  const handleCerrarEditarObra = () => {
+    setEditandoObraId(null)
+    setEditObraForm(null)
+    setEditObraError('')
+    setEditObraFotoActual(null)
+    setEditObraFotoFile(null)
+    setEditObraFotoPreview(null)
+  }
+
+  const handleEditObraChange = (e) => {
+    const { name, value } = e.target
+    setEditObraForm((prev) => ({ ...prev, [name]: value }))
+  }
+
+  const handleEditObraFotoChange = (e) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setEditObraFotoFile(file)
+    const reader = new FileReader()
+    reader.onload = (ev) => setEditObraFotoPreview(ev.target.result)
+    reader.readAsDataURL(file)
+  }
+
+  const handleGuardarObra = async (e) => {
+    e.preventDefault()
+    setEditObraError('')
+    setEditObraSaving(true)
+    try {
+      const payload = {
+        ...editObraForm,
+        anio_creacion: editObraForm.anio_creacion ? Number(editObraForm.anio_creacion) : null,
+        peso: editObraForm.peso ? Number(editObraForm.peso) : null,
+      }
+      const obraActualizada = await actualizarMiObraRequest(editandoObraId, payload, user.token)
+      let nuevaMultimedia = null
+      if (editObraFotoFile) {
+        nuevaMultimedia = await reemplazarFotoObraRequest(editandoObraId, editObraFotoFile, user.token)
+      }
+      setMisObras((prev) => prev.map((o) => (
+        o.id_obra === editandoObraId
+          ? { ...o, ...obraActualizada, ...(nuevaMultimedia ? { multimedia: [nuevaMultimedia] } : {}) }
+          : o
+      )))
+      handleCerrarEditarObra()
+      setObraGuardadaMensaje('Su obra fue modificada. Espere nuevamente la aprobación administrativa.')
+      setTimeout(() => setObraGuardadaMensaje(''), 6000)
+    } catch (err) {
+      setEditObraError(err.message)
+    } finally {
+      setEditObraSaving(false)
     }
   }
 
@@ -290,9 +374,9 @@ function CultorDashboard({ isOpen, onClose, onOpenUpload, initialTab }) {
                     Mis obras enviadas
                   </span>
 
-                  {fotoObraError && (
-                    <div className="rounded-xl border border-red-200/50 bg-red-50/60 px-4 py-3 font-sans text-sm text-red-700">
-                      {fotoObraError}
+                  {obraGuardadaMensaje && (
+                    <div className="rounded-xl border border-emerald-200/50 bg-emerald-50/60 px-4 py-3 font-sans text-sm text-emerald-700">
+                      {obraGuardadaMensaje}
                     </div>
                   )}
 
@@ -310,34 +394,19 @@ function CultorDashboard({ isOpen, onClose, onOpenUpload, initialTab }) {
                             <th className="px-5 py-3 font-sans text-xs font-semibold uppercase tracking-wide text-cafe-noir/70">Tipo</th>
                             <th className="px-5 py-3 font-sans text-xs font-semibold uppercase tracking-wide text-cafe-noir/70">Código</th>
                             <th className="px-5 py-3 font-sans text-xs font-semibold uppercase tracking-wide text-cafe-noir/70">Estado</th>
+                            <th className="px-5 py-3 font-sans text-xs font-semibold uppercase tracking-wide text-cafe-noir/70">Acciones</th>
                           </tr>
                         </thead>
                         <tbody>
-                          {misObras.map((obra) => (
+                          {obrasPaginadas.map((obra) => (
                             <tr key={obra.id_obra} className="border-b border-cafe-noir/5 last:border-0">
                               <td className="px-5 py-4">
-                                <div className="flex items-center gap-3">
-                                  <div className="h-12 w-12 shrink-0 overflow-hidden rounded-lg bg-cafe-noir/5 flex items-center justify-center">
-                                    {obra.multimedia?.[0]?.url_archivo ? (
-                                      <img src={obra.multimedia[0].url_archivo} alt={obra.titulo} className="h-full w-full object-cover" />
-                                    ) : (
-                                      <span className="font-sans text-[9px] text-cafe-noir/40 text-center px-1">Sin foto</span>
-                                    )}
-                                  </div>
-                                  <label className="cursor-pointer whitespace-nowrap font-sans text-[11px] font-semibold uppercase tracking-wide text-tertiary hover:opacity-70">
-                                    {fotoObraUploadingId === obra.id_obra ? 'Subiendo...' : 'Cambiar'}
-                                    <input
-                                      type="file"
-                                      accept="image/jpeg,image/png,image/webp"
-                                      className="hidden"
-                                      disabled={fotoObraUploadingId === obra.id_obra}
-                                      onChange={(e) => {
-                                        const file = e.target.files?.[0]
-                                        if (file) handleObraFotoUpload(obra.id_obra, file)
-                                        e.target.value = ''
-                                      }}
-                                    />
-                                  </label>
+                                <div className="h-12 w-12 shrink-0 overflow-hidden rounded-lg bg-cafe-noir/5 flex items-center justify-center">
+                                  {obra.multimedia?.[0]?.url_archivo ? (
+                                    <img src={obra.multimedia[0].url_archivo} alt={obra.titulo} className="h-full w-full object-cover" />
+                                  ) : (
+                                    <span className="font-sans text-[9px] text-cafe-noir/40 text-center px-1">Sin foto</span>
+                                  )}
                                 </div>
                               </td>
                               <td className="px-5 py-4 font-sans text-sm font-medium text-cafe-noir capitalize">{obra.titulo}</td>
@@ -348,12 +417,54 @@ function CultorDashboard({ isOpen, onClose, onOpenUpload, initialTab }) {
                                   {obra.estatus === 'aprobado' ? 'Aprobada' : obra.estatus === 'pendiente' ? 'En Revisión' : 'Rechazada'}
                                 </span>
                               </td>
+                              <td className="px-5 py-4">
+                                <button
+                                  type="button"
+                                  onClick={() => handleAbrirEditarObra(obra)}
+                                  className="whitespace-nowrap font-sans text-[11px] font-semibold uppercase tracking-wide text-tertiary hover:opacity-70"
+                                >
+                                  Editar
+                                </button>
+                              </td>
                             </tr>
                           ))}
                         </tbody>
                       </table>
                     </div>
-                  ) : (
+                  ) : null}
+
+                  {totalPaginasObras > 1 && (
+                    <div className="flex items-center justify-center gap-2 pt-2">
+                      <button
+                        type="button"
+                        onClick={() => setObrasPage((p) => Math.max(1, p - 1))}
+                        disabled={obrasPage === 1}
+                        className="rounded-full px-4 py-1.5 font-sans text-xs font-semibold uppercase tracking-wide text-cafe-noir/70 border border-cafe-noir/20 hover:opacity-70 disabled:opacity-40"
+                      >
+                        Anterior
+                      </button>
+                      {Array.from({ length: totalPaginasObras }, (_, i) => i + 1).map((p) => (
+                        <button
+                          key={p}
+                          type="button"
+                          onClick={() => setObrasPage(p)}
+                          className={`h-8 w-8 rounded-full font-sans text-xs font-semibold ${obrasPage === p ? 'bg-tertiary text-linen' : 'text-cafe-noir/70 border border-cafe-noir/20 hover:opacity-70'}`}
+                        >
+                          {p}
+                        </button>
+                      ))}
+                      <button
+                        type="button"
+                        onClick={() => setObrasPage((p) => Math.min(totalPaginasObras, p + 1))}
+                        disabled={obrasPage === totalPaginasObras}
+                        className="rounded-full px-4 py-1.5 font-sans text-xs font-semibold uppercase tracking-wide text-cafe-noir/70 border border-cafe-noir/20 hover:opacity-70 disabled:opacity-40"
+                      >
+                        Siguiente
+                      </button>
+                    </div>
+                  )}
+
+                  {misObras.length === 0 && !obrasLoading && (
                     <div className="rounded-2xl border border-cafe-noir/10 bg-white/50 px-6 py-10 text-center">
                       <p className="font-sans text-sm text-cafe-noir/60">Aún no has postulado obras al archivo.</p>
                     </div>
@@ -381,10 +492,22 @@ function CultorDashboard({ isOpen, onClose, onOpenUpload, initialTab }) {
                       <div className="flex flex-col gap-2">
                         {fotoSuccess && <p className="font-sans text-sm text-emerald-700">{fotoSuccess}</p>}
                         {fotoError && <p className="font-sans text-sm text-red-700">{fotoError}</p>}
-                        <label className="cursor-pointer rounded-full bg-tertiary px-5 py-2 font-sans text-xs font-semibold uppercase tracking-wide text-linen shadow-md transition-opacity hover:opacity-80 inline-block self-start">
-                          {fotoUploading ? 'Subiendo...' : 'Cambiar Foto'}
-                          <input type="file" accept="image/jpeg,image/png,image/webp" onChange={handleFotoUpload} className="hidden" disabled={fotoUploading} />
-                        </label>
+                        <div className="flex items-center gap-3">
+                          <label className="cursor-pointer rounded-full bg-tertiary px-5 py-2 font-sans text-xs font-semibold uppercase tracking-wide text-linen shadow-md transition-opacity hover:opacity-80 inline-block self-start">
+                            {fotoUploading ? 'Subiendo...' : 'Cambiar Foto'}
+                            <input type="file" accept="image/jpeg,image/png,image/webp" onChange={handleFotoUpload} className="hidden" disabled={fotoUploading} />
+                          </label>
+                          {perfil?.foto_perfil && (
+                            <button
+                              type="button"
+                              onClick={handleFotoDelete}
+                              disabled={fotoDeleting}
+                              className="rounded-full px-5 py-2 font-sans text-xs font-semibold uppercase tracking-wide text-red-700 border border-red-200 transition-opacity hover:opacity-70 disabled:opacity-50"
+                            >
+                              {fotoDeleting ? 'Eliminando...' : 'Eliminar Foto'}
+                            </button>
+                          )}
+                        </div>
                         <p className="font-sans text-[11px] text-cafe-noir/50">JPG, PNG o WEBP · Máx 5 MB</p>
                       </div>
                     </div>
@@ -842,6 +965,165 @@ function CultorDashboard({ isOpen, onClose, onOpenUpload, initialTab }) {
             </div>
           </div>
         </div>
+
+        {editandoObraId !== null && editObraForm && (
+          <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-[#3a200d]/90 backdrop-blur-md">
+            <div className="w-full max-w-lg max-h-[90vh] overflow-y-auto rounded-2xl bg-[#F4F0E6] shadow-2xl p-6 sm:p-8 space-y-5 custom-scrollbar">
+              <h3 className="font-serif text-xl text-cafe-noir">Editar Obra</h3>
+              <p className="font-sans text-xs text-cafe-noir/60">
+                Si esta obra ya estaba aprobada, al guardar volverá a estado "En Revisión" para que el equipo del museo confirme los cambios.
+              </p>
+
+              {editObraError && (
+                <div className="rounded-xl border border-red-200/50 bg-red-50/60 px-4 py-3 font-sans text-sm text-red-700">
+                  {editObraError}
+                </div>
+              )}
+
+              <form onSubmit={handleGuardarObra} className="space-y-4">
+                <div>
+                  <label className="font-sans text-xs font-semibold uppercase tracking-wide text-cafe-noir">Fotografía de la obra</label>
+                  <div className="mt-1 flex items-center gap-4">
+                    <div className="h-16 w-16 shrink-0 overflow-hidden rounded-lg bg-cafe-noir/5 flex items-center justify-center">
+                      {editObraFotoPreview || editObraFotoActual ? (
+                        <img src={editObraFotoPreview || editObraFotoActual} alt="Foto de la obra" className="h-full w-full object-cover" />
+                      ) : (
+                        <span className="font-sans text-[9px] text-cafe-noir/40 text-center px-1">Sin foto</span>
+                      )}
+                    </div>
+                    <label className="cursor-pointer rounded-full bg-tertiary px-5 py-2 font-sans text-xs font-semibold uppercase tracking-wide text-linen shadow-md transition-opacity hover:opacity-80 inline-block">
+                      Cambiar Foto
+                      <input type="file" accept="image/jpeg,image/png,image/webp" onChange={handleEditObraFotoChange} className="hidden" />
+                    </label>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="font-sans text-xs font-semibold uppercase tracking-wide text-cafe-noir">Título</label>
+                  <input
+                    type="text"
+                    name="titulo"
+                    value={editObraForm.titulo}
+                    onChange={handleEditObraChange}
+                    required
+                    className="mt-1 w-full rounded-xl border border-cafe-noir/20 bg-white/60 px-4 py-2.5 font-sans text-sm focus:border-tertiary focus:outline-none focus:ring-1 focus:ring-tertiary"
+                  />
+                </div>
+
+                <div>
+                  <label className="font-sans text-xs font-semibold uppercase tracking-wide text-cafe-noir">Descripción histórica</label>
+                  <textarea
+                    name="descripcion_historica"
+                    value={editObraForm.descripcion_historica}
+                    onChange={handleEditObraChange}
+                    rows={3}
+                    className="mt-1 w-full rounded-xl border border-cafe-noir/20 bg-white/60 px-4 py-2.5 font-sans text-sm focus:border-tertiary focus:outline-none focus:ring-1 focus:ring-tertiary"
+                  />
+                </div>
+
+                <div>
+                  <label className="font-sans text-xs font-semibold uppercase tracking-wide text-cafe-noir">Significado cultural</label>
+                  <textarea
+                    name="significado_cultural"
+                    value={editObraForm.significado_cultural}
+                    onChange={handleEditObraChange}
+                    rows={2}
+                    className="mt-1 w-full rounded-xl border border-cafe-noir/20 bg-white/60 px-4 py-2.5 font-sans text-sm focus:border-tertiary focus:outline-none focus:ring-1 focus:ring-tertiary"
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="font-sans text-xs font-semibold uppercase tracking-wide text-cafe-noir">Técnica utilizada</label>
+                    <input
+                      type="text"
+                      name="tecnica_utilizada"
+                      value={editObraForm.tecnica_utilizada}
+                      onChange={handleEditObraChange}
+                      className="mt-1 w-full rounded-xl border border-cafe-noir/20 bg-white/60 px-4 py-2.5 font-sans text-sm focus:border-tertiary focus:outline-none focus:ring-1 focus:ring-tertiary"
+                    />
+                  </div>
+                  <div>
+                    <label className="font-sans text-xs font-semibold uppercase tracking-wide text-cafe-noir">Materiales utilizados</label>
+                    <input
+                      type="text"
+                      name="materiales_utilizados"
+                      value={editObraForm.materiales_utilizados}
+                      onChange={handleEditObraChange}
+                      className="mt-1 w-full rounded-xl border border-cafe-noir/20 bg-white/60 px-4 py-2.5 font-sans text-sm focus:border-tertiary focus:outline-none focus:ring-1 focus:ring-tertiary"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-3 gap-4">
+                  <div>
+                    <label className="font-sans text-xs font-semibold uppercase tracking-wide text-cafe-noir">Año de creación</label>
+                    <input
+                      type="number"
+                      name="anio_creacion"
+                      value={editObraForm.anio_creacion}
+                      onChange={handleEditObraChange}
+                      min="1900"
+                      max={new Date().getFullYear()}
+                      className="mt-1 w-full rounded-xl border border-cafe-noir/20 bg-white/60 px-4 py-2.5 font-sans text-sm focus:border-tertiary focus:outline-none focus:ring-1 focus:ring-tertiary"
+                    />
+                  </div>
+                  <div>
+                    <label className="font-sans text-xs font-semibold uppercase tracking-wide text-cafe-noir">Dimensiones</label>
+                    <input
+                      type="text"
+                      name="dimensiones"
+                      value={editObraForm.dimensiones}
+                      onChange={handleEditObraChange}
+                      className="mt-1 w-full rounded-xl border border-cafe-noir/20 bg-white/60 px-4 py-2.5 font-sans text-sm focus:border-tertiary focus:outline-none focus:ring-1 focus:ring-tertiary"
+                    />
+                  </div>
+                  <div>
+                    <label className="font-sans text-xs font-semibold uppercase tracking-wide text-cafe-noir">Peso</label>
+                    <input
+                      type="number"
+                      name="peso"
+                      value={editObraForm.peso}
+                      onChange={handleEditObraChange}
+                      min="0"
+                      step="0.01"
+                      className="mt-1 w-full rounded-xl border border-cafe-noir/20 bg-white/60 px-4 py-2.5 font-sans text-sm focus:border-tertiary focus:outline-none focus:ring-1 focus:ring-tertiary"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="font-sans text-xs font-semibold uppercase tracking-wide text-cafe-noir">Tiempo de ejecución</label>
+                  <input
+                    type="text"
+                    name="tiempo_ejecucion"
+                    value={editObraForm.tiempo_ejecucion}
+                    onChange={handleEditObraChange}
+                    placeholder="Ej. 3 semanas"
+                    className="mt-1 w-full rounded-xl border border-cafe-noir/20 bg-white/60 px-4 py-2.5 font-sans text-sm focus:border-tertiary focus:outline-none focus:ring-1 focus:ring-tertiary"
+                  />
+                </div>
+
+                <div className="flex justify-end gap-3 pt-2">
+                  <button
+                    type="button"
+                    onClick={handleCerrarEditarObra}
+                    className="rounded-full px-6 py-2.5 font-sans text-xs font-semibold uppercase tracking-wide text-cafe-noir/70 hover:opacity-70"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={editObraSaving}
+                    className="rounded-full bg-tertiary px-6 py-2.5 font-sans text-xs font-semibold uppercase tracking-wide text-linen shadow-md transition-opacity hover:opacity-80 disabled:opacity-50"
+                  >
+                    {editObraSaving ? 'Guardando...' : 'Guardar Cambios'}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
       </div>
   )
 }

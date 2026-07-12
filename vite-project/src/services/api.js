@@ -305,6 +305,21 @@ export async function postularObraRequest(data, token) {
   }
 }
 
+// Edita el contenido de una obra ya existente del cultor logueado (autoservicio, solo
+// sobre sus propias obras — el backend valida la propiedad). Si la obra ya estaba
+// aprobada, el backend la regresa a 'pendiente' para que el museo la revise de nuevo.
+export async function actualizarMiObraRequest(idObra, data, token) {
+  try {
+    const response = await axios.put(`${API_URL}/obras/${idObra}`, data, {
+      headers: { Authorization: `Bearer ${token}` }
+    })
+    return response.data
+  } catch (error) {
+    const errorMsg = error.response?.data?.error || error.response?.data?.message || 'Error al actualizar la obra'
+    throw new Error(errorMsg, { cause: error })
+  }
+}
+
 // Reemplaza la fotografía de una obra ya existente del cultor logueado (autoservicio,
 // solo sobre sus propias obras — el backend valida la propiedad).
 export async function reemplazarFotoObraRequest(idObra, archivo, token) {
@@ -384,6 +399,18 @@ export async function subirFotoPerfilRequest(file, token) {
     return response.data
   } catch (error) {
     const errorMsg = error.response?.data?.error || error.response?.data?.message || 'Error al subir la foto'
+    throw new Error(errorMsg, { cause: error })
+  }
+}
+
+export async function eliminarFotoPerfilRequest(token) {
+  try {
+    const response = await axios.delete(`${API_URL}/cultores/mi-foto`, {
+      headers: { Authorization: `Bearer ${token}` }
+    })
+    return response.data
+  } catch (error) {
+    const errorMsg = error.response?.data?.error || error.response?.data?.message || 'Error al eliminar la foto'
     throw new Error(errorMsg, { cause: error })
   }
 }

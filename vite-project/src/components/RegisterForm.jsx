@@ -21,15 +21,6 @@ const recaudosRequeridos = [
   'Certificado (si cuenta con el)',
 ]
 
-function arrayBufferToBase64(buffer) {
-  const bytes = new Uint8Array(buffer)
-  let binary = ''
-  for (let i = 0; i < bytes.length; i++) {
-    binary += String.fromCharCode(bytes[i])
-  }
-  return btoa(binary)
-}
-
 const prefijosCedula = ['V', 'E']
 const prefijosTelefono = ['0414', '0424', '0416', '0426', '0412', '0422', '0276']
 
@@ -250,6 +241,11 @@ function RegisterForm({ isOpen, onClose }) {
     if (!camposVisuales.municipio) camposFaltantes.push('Municipio de residencia')
     if (camposFaltantes.length > 0) {
       setSubmitError(`Completa los siguientes campos obligatorios: ${camposFaltantes.join(', ')}.`)
+      return
+    }
+
+    if (cedulaNumero.length < 6) {
+      setSubmitError('La cédula debe tener al menos 6 dígitos.')
       return
     }
 

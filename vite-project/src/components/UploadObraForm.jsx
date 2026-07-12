@@ -18,6 +18,11 @@ function UploadObraForm({ isOpen, onClose, onObraEnviada }) {
   const [anio, setAnio] = useState(new Date().getFullYear())
   const [descripcion, setDescripcion] = useState('')
   const [tecnica, setTecnica] = useState('')
+  const [materiales, setMateriales] = useState('')
+  const [dimensiones, setDimensiones] = useState('')
+  const [peso, setPeso] = useState('')
+  const [tiempoEjecucion, setTiempoEjecucion] = useState('')
+  const [significadoCultural, setSignificadoCultural] = useState('')
   const [archivoImagen, setArchivoImagen] = useState(null)
   const [previsualizacion, setPrevisualizacion] = useState(null)
   const fileInputRef = useRef(null)
@@ -68,6 +73,12 @@ function UploadObraForm({ isOpen, onClose, onObraEnviada }) {
       if (categoriaSeleccionada?.nombre) formData.append('tipo_patrimonio', categoriaSeleccionada.nombre)
       formData.append('descripcion_historica', descripcion)
       formData.append('tecnica_utilizada', tecnica)
+      if (anio) formData.append('anio_creacion', anio)
+      formData.append('materiales_utilizados', materiales)
+      formData.append('dimensiones', dimensiones)
+      if (peso) formData.append('peso', peso)
+      formData.append('tiempo_ejecucion', tiempoEjecucion)
+      formData.append('significado_cultural', significadoCultural)
       formData.append('archivo', archivoImagen)
 
       await postularObraRequest(formData, user.token)
@@ -80,6 +91,7 @@ function UploadObraForm({ isOpen, onClose, onObraEnviada }) {
         setTitulo(''); setDescripcion(''); setTecnica('')
         setIdCategoria(categoriasList[0]?.id_categoria ?? '')
         setAnio(new Date().getFullYear())
+        setMateriales(''); setDimensiones(''); setPeso(''); setTiempoEjecucion(''); setSignificadoCultural('')
         setArchivoImagen(null); setPrevisualizacion(null)
         onClose()
       }, 3500)
@@ -166,11 +178,48 @@ function UploadObraForm({ isOpen, onClose, onObraEnviada }) {
                   <input type="text" value={tecnica} onChange={(e) => setTecnica(e.target.value)} className="w-full rounded-xl border border-cafe-noir/20 bg-white/60 px-4 py-3 font-sans text-sm shadow-sm focus:border-tertiary focus:outline-none focus:ring-1 focus:ring-tertiary" placeholder="Ej: Tejido en espiral, pincel seco..." />
                 </div>
 
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                  <div>
+                    <label className="block font-sans text-xs font-semibold uppercase tracking-wide text-cafe-noir mb-2">
+                      Materiales utilizados
+                    </label>
+                    <input required type="text" value={materiales} onChange={(e) => setMateriales(e.target.value)} className="w-full rounded-xl border border-cafe-noir/20 bg-white/60 px-4 py-3 font-sans text-sm shadow-sm focus:border-tertiary focus:outline-none focus:ring-1 focus:ring-tertiary" placeholder="Ej: Caña amarga, tintes naturales" />
+                  </div>
+                  <div>
+                    <label className="block font-sans text-xs font-semibold uppercase tracking-wide text-cafe-noir mb-2">
+                      Dimensiones
+                    </label>
+                    <input required type="text" value={dimensiones} onChange={(e) => setDimensiones(e.target.value)} className="w-full rounded-xl border border-cafe-noir/20 bg-white/60 px-4 py-3 font-sans text-sm shadow-sm focus:border-tertiary focus:outline-none focus:ring-1 focus:ring-tertiary" placeholder="Ej: 30cm x 20cm x 15cm" />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                  <div>
+                    <label className="block font-sans text-xs font-semibold uppercase tracking-wide text-cafe-noir mb-2">
+                      Peso (kg)
+                    </label>
+                    <input required type="number" min="0" step="0.01" value={peso} onChange={(e) => setPeso(e.target.value)} className="w-full rounded-xl border border-cafe-noir/20 bg-white/60 px-4 py-3 font-sans text-sm shadow-sm focus:border-tertiary focus:outline-none focus:ring-1 focus:ring-tertiary" placeholder="Ej: 1.5" />
+                  </div>
+                  <div>
+                    <label className="block font-sans text-xs font-semibold uppercase tracking-wide text-cafe-noir mb-2">
+                      Tiempo de ejecución
+                    </label>
+                    <input required type="text" value={tiempoEjecucion} onChange={(e) => setTiempoEjecucion(e.target.value)} className="w-full rounded-xl border border-cafe-noir/20 bg-white/60 px-4 py-3 font-sans text-sm shadow-sm focus:border-tertiary focus:outline-none focus:ring-1 focus:ring-tertiary" placeholder="Ej: 3 semanas" />
+                  </div>
+                </div>
+
                 <div>
                   <label className="block font-sans text-xs font-semibold uppercase tracking-wide text-cafe-noir mb-2">
                     Descripción
                   </label>
                   <textarea rows="3" value={descripcion} onChange={(e) => setDescripcion(e.target.value)} className="w-full rounded-xl border border-cafe-noir/20 bg-white/60 px-4 py-3 font-sans text-sm shadow-sm focus:border-tertiary focus:outline-none focus:ring-1 focus:ring-tertiary" placeholder="Describe los materiales y el proceso..." />
+                </div>
+
+                <div>
+                  <label className="block font-sans text-xs font-semibold uppercase tracking-wide text-cafe-noir mb-2">
+                    Significado cultural
+                  </label>
+                  <textarea required rows="3" value={significadoCultural} onChange={(e) => setSignificadoCultural(e.target.value)} className="w-full rounded-xl border border-cafe-noir/20 bg-white/60 px-4 py-3 font-sans text-sm shadow-sm focus:border-tertiary focus:outline-none focus:ring-1 focus:ring-tertiary" placeholder="¿Qué representa esta obra dentro de la tradición cultural?" />
                 </div>
 
                 <div>
