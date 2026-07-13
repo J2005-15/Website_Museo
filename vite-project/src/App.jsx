@@ -18,6 +18,7 @@ import Footer from './components/Footer'
 import ForgotPassword from './components/ForgotPassword'
 import ResetPassword from './components/ResetPassword'
 import ManualWeb from './components/ManualWeb'
+import MapSection from './components/MapSection'
 
 // La home pública: Navbar + secciones + todos los modales (Registro, Login, Subir
 // obra, Panel del cultor). El login nunca tuvo página propia, vive como modal — por
@@ -69,6 +70,7 @@ function HomePage({ autoOpenLogin = false }) {
       {selectedCultor && user && (
         <CultorProfile cultor={selectedCultor} onClose={() => setSelectedCultor(null)} />
       )}
+      <MapSection />
       <Footer />
     </div>
   )

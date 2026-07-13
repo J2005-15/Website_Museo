@@ -4,7 +4,7 @@ import { socket } from '../services/socket'
 import { useReveal } from '../hooks/useReveal'
 import { useAuth } from '../context/AuthContext'
 
-const CULTORES_POR_PAGINA = 6
+const CULTORES_POR_PAGINA = 3
 
 function Directorio({ onSelectCultor, onOpenLogin }) {
   const { ref, isVisible } = useReveal(0)
