@@ -1,6 +1,8 @@
 import { createContext, useContext, useState, useEffect } from 'react'
 import { socket } from '../services/socket'
 
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api'
+
 const ConfigContext = createContext()
 
 export function useConfig() {
@@ -22,8 +24,7 @@ export function ConfigProvider({ children }) {
 
   const fetchConfigWeb = async () => {
     try {
-      // Usamos el puerto 3000 que es donde está el backend
-      const response = await fetch(`http://localhost:3000/api/configuracion-web?_=${Date.now()}`)
+      const response = await fetch(`${API_URL}/configuracion-web?_=${Date.now()}`)
       if (response.ok) {
         const data = await response.json()
         setConfigWeb(data)
