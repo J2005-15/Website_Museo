@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
-import { Eye, EyeOff, AlertTriangle, ShieldCheck } from 'lucide-react'
+import { Eye, EyeOff, AlertTriangle, ShieldCheck, FileText, Upload, Trash2 } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
-import { getMiPerfilRequest, getMisObrasRequest, updateMiPerfilRequest, appendCurriculumRequest, changePasswordRequest, updateProfileRequest, subirFotoPerfilRequest, eliminarFotoPerfilRequest, reemplazarFotoObraRequest, actualizarMiObraRequest } from '../services/api'
+import { getMiPerfilRequest, getMisObrasRequest, updateMiPerfilRequest, appendCurriculumRequest, changePasswordRequest, updateProfileRequest, subirFotoPerfilRequest, eliminarFotoPerfilRequest, reemplazarFotoObraRequest, actualizarMiObraRequest, getMisDocumentosRequest, subirDocumentosSoporteRequest, eliminarDocumentoRequest } from '../services/api'
 
 const estadoEstilos = {
   aprobado: 'bg-emerald-100 text-emerald-600 border-emerald-200/50',
@@ -55,6 +55,15 @@ function CultorDashboard({ isOpen, onClose, onOpenUpload, initialTab }) {
   const [nuevoTextoCurriculum, setNuevoTextoCurriculum] = useState('')
   const [curriculumSaving, setCurriculumSaving] = useState(false)
   const [curriculumError, setCurriculumError] = useState('')
+
+  // Documentos de soporte
+  const [documentos, setDocumentos] = useState([])
+  const [documentosLoading, setDocumentosLoading] = useState(false)
+  const [docArchivos, setDocArchivos] = useState([])
+  const [docSaving, setDocSaving] = useState(false)
+  const [docError, setDocError] = useState('')
+  const [docSuccess, setDocSuccess] = useState('')
+  const [docConfirmDelete, setDocConfirmDelete] = useState(null)
   const [curriculumSuccess, setCurriculumSuccess] = useState('')
 
   // Perfil real del cultor (cédula, parroquia, dirección, etc.), traído del backend
@@ -128,6 +137,16 @@ function CultorDashboard({ isOpen, onClose, onOpenUpload, initialTab }) {
       })
       .catch(() => setMisObras([]))
       .finally(() => setObrasLoading(false))
+  }, [isOpen, user])
+
+  // Documentos de soporte del cultor
+  useEffect(() => {
+    if (!isOpen || !user) return
+    setDocumentosLoading(true)
+    getMisDocumentosRequest(user.token)
+      .then((data) => setDocumentos(Array.isArray(data) ? data : []))
+      .catch(() => setDocumentos([]))
+      .finally(() => setDocumentosLoading(false))
   }, [isOpen, user])
 
   if (!isOpen || !user) return null
@@ -479,8 +498,8 @@ function CultorDashboard({ isOpen, onClose, onOpenUpload, initialTab }) {
                     <span className="font-sans text-xs font-semibold uppercase tracking-wide text-cafe-noir">
                       Foto de Perfil
                     </span>
-                    <div className="flex items-center gap-6 rounded-2xl border border-cafe-noir/10 bg-white/50 p-6">
-                      <div className="h-24 w-24 rounded-full border-4 border-linen bg-gallery-cream shadow-md overflow-hidden flex items-center justify-center shrink-0">
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-4 sm:gap-6 rounded-2xl border border-cafe-noir/10 bg-white/50 p-6">
+                      <div className="h-24 w-24 rounded-full border-4 border-linen bg-gallery-cream shadow-md overflow-hidden flex items-center justify-center shrink-0 mx-auto sm:mx-0">
                         {perfil?.foto_perfil ? (
                           <img src={perfil.foto_perfil} alt="Foto de perfil" className="w-full h-full object-cover" />
                         ) : (
@@ -489,11 +508,11 @@ function CultorDashboard({ isOpen, onClose, onOpenUpload, initialTab }) {
                           </span>
                         )}
                       </div>
-                      <div className="flex flex-col gap-2">
+                      <div className="flex flex-col gap-2 text-center sm:text-left">
                         {fotoSuccess && <p className="font-sans text-sm text-emerald-700">{fotoSuccess}</p>}
                         {fotoError && <p className="font-sans text-sm text-red-700">{fotoError}</p>}
-                        <div className="flex items-center gap-3">
-                          <label className="cursor-pointer rounded-full bg-tertiary px-5 py-2 font-sans text-xs font-semibold uppercase tracking-wide text-linen shadow-md transition-opacity hover:opacity-80 inline-block self-start">
+                        <div className="flex flex-wrap items-center gap-3 justify-center sm:justify-start">
+                          <label className="cursor-pointer rounded-full bg-tertiary px-5 py-2 font-sans text-xs font-semibold uppercase tracking-wide text-linen shadow-md transition-opacity hover:opacity-80 inline-block">
                             {fotoUploading ? 'Subiendo...' : 'Cambiar Foto'}
                             <input type="file" accept="image/jpeg,image/png,image/webp" onChange={handleFotoUpload} className="hidden" disabled={fotoUploading} />
                           </label>
@@ -794,6 +813,157 @@ function CultorDashboard({ isOpen, onClose, onOpenUpload, initialTab }) {
                         </button>
                       </div>
                     </form>
+                  </div>
+                </div>
+              )}
+
+              {activeTab === 'perfil' && (
+                <div className="space-y-4">
+                  <div className="flex items-center gap-2">
+                    <FileText size={18} className="text-tertiary" />
+                    <span className="font-sans text-xs font-semibold uppercase tracking-wide text-cafe-noir">
+                      Documentos de Soporte
+                    </span>
+                  </div>
+
+                  {docSuccess && (
+                    <div className="rounded-xl border border-emerald-200/50 bg-emerald-50/60 px-4 py-3 font-sans text-sm text-emerald-700">
+                      {docSuccess}
+                    </div>
+                  )}
+                  {docError && (
+                    <div className="rounded-xl border border-red-200/50 bg-red-50/60 px-4 py-3 font-sans text-sm text-red-700">
+                      {docError}
+                    </div>
+                  )}
+
+                  <div className="rounded-2xl border border-cafe-noir/10 bg-white/50 p-6 space-y-4">
+                    {documentosLoading ? (
+                      <p className="font-sans text-sm text-cafe-noir/50">Cargando documentos...</p>
+                    ) : documentos.length > 0 ? (
+                      <div className="space-y-3">
+                        <p className="font-sans text-[11px] uppercase tracking-wide text-cafe-noir/50">Documentos cargados</p>
+                        {documentos.map((doc) => (
+                          <div key={doc.id_documento} className="flex items-center gap-3 rounded-xl border border-cafe-noir/10 bg-white/70 px-4 py-3">
+                            <FileText size={16} className="text-tertiary shrink-0" />
+                            <div className="min-w-0 flex-1">
+                              <p className="font-sans text-sm text-cafe-noir truncate">{doc.nombre_archivo}</p>
+                              <p className="font-sans text-[11px] text-cafe-noir/40">
+                                {doc.fecha_carga ? new Date(doc.fecha_carga).toLocaleDateString('es-VE') : ''}
+                              </p>
+                            </div>
+                            <a
+                              href={doc.url_archivo}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="shrink-0 rounded-full border border-cafe-noir/20 px-3 py-1 font-sans text-[11px] font-semibold uppercase tracking-wide text-cafe-noir transition-opacity hover:opacity-70"
+                            >
+                              Ver
+                            </a>
+                            <button
+                              type="button"
+                              onClick={() => setDocConfirmDelete(doc.id_documento)}
+                              className="shrink-0 rounded-full border border-red-200/50 p-1.5 text-red-400 transition-colors hover:bg-red-50 hover:text-red-600"
+                            >
+                              <Trash2 size={14} />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="font-sans text-sm text-cafe-noir/40">No has subido documentos de soporte aún.</p>
+                    )}
+
+                    {docConfirmDelete && (
+                      <div className="rounded-xl border border-red-200/50 bg-red-50/60 p-4 space-y-3">
+                        <p className="font-sans text-sm text-red-700">¿Eliminar este documento?</p>
+                        <div className="flex items-center gap-3">
+                          <button
+                            type="button"
+                            onClick={async () => {
+                              try {
+                                await eliminarDocumentoRequest(docConfirmDelete, user.token)
+                                setDocumentos((prev) => prev.filter((d) => d.id_documento !== docConfirmDelete))
+                                setDocConfirmDelete(null)
+                              } catch (err) {
+                                setDocError(err.message)
+                                setDocConfirmDelete(null)
+                              }
+                            }}
+                            className="rounded-full bg-red-600 px-4 py-1.5 font-sans text-xs font-semibold uppercase tracking-wide text-white transition-opacity hover:opacity-80"
+                          >
+                            Sí, eliminar
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setDocConfirmDelete(null)}
+                            className="rounded-full border border-cafe-noir/20 px-4 py-1.5 font-sans text-xs font-semibold uppercase tracking-wide text-cafe-noir transition-opacity hover:opacity-70"
+                          >
+                            Cancelar
+                          </button>
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="pt-2">
+                      <label className="block font-sans text-xs font-semibold uppercase tracking-wide text-cafe-noir mb-2">
+                        Subir nuevos documentos
+                      </label>
+                      <p className="font-sans text-[11px] text-cafe-noir/40 mb-3">
+                        JPG, PNG, WEBP o PDF. Máximo 5MB por archivo.
+                      </p>
+                      <input
+                        type="file"
+                        multiple
+                        accept="image/jpeg,image/png,image/webp,application/pdf"
+                        onChange={(e) => setDocArchivos(Array.from(e.target.files))}
+                        className="block w-full text-sm text-cafe-noir/70 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-semibold file:uppercase file:tracking-wide file:bg-tertiary file:text-linen file:cursor-pointer file:transition-opacity hover:file:opacity-80"
+                      />
+                    </div>
+
+                    {docArchivos.length > 0 && (
+                      <div className="space-y-2">
+                        <p className="font-sans text-[11px] uppercase tracking-wide text-cafe-noir/50">
+                          {docArchivos.length} archivo{docArchivos.length > 1 ? 's' : ''} seleccionado{docArchivos.length > 1 ? 's' : ''}
+                        </p>
+                        <ul className="space-y-1">
+                          {docArchivos.map((f, i) => (
+                            <li key={i} className="flex items-center gap-2 text-sm text-cafe-noir/60">
+                              <FileText size={14} className="shrink-0" />
+                              <span className="truncate">{f.name}</span>
+                              <span className="text-[11px] text-cafe-noir/30 shrink-0">({(f.size / 1024 / 1024).toFixed(1)} MB)</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+
+                    <div className="flex justify-end pt-2">
+                      <button
+                        type="button"
+                        disabled={docSaving || docArchivos.length === 0}
+                        onClick={async () => {
+                          if (!perfil?.id_cultor || docArchivos.length === 0) return
+                          setDocSaving(true)
+                          setDocError('')
+                          setDocSuccess('')
+                          try {
+                            await subirDocumentosSoporteRequest(perfil.id_cultor, docArchivos)
+                            setDocArchivos([])
+                            setDocSuccess('Documentos subidos correctamente.')
+                            const docs = await getMisDocumentosRequest(user.token)
+                            setDocumentos(Array.isArray(docs) ? docs : [])
+                          } catch (err) {
+                            setDocError(err.message)
+                          } finally {
+                            setDocSaving(false)
+                          }
+                        }}
+                        className="rounded-full bg-tertiary px-6 py-2.5 font-sans text-xs font-semibold uppercase tracking-wide text-linen shadow-md transition-opacity hover:opacity-80 disabled:opacity-50"
+                      >
+                        {docSaving ? 'Subiendo...' : 'Subir Documentos'}
+                      </button>
+                    </div>
                   </div>
                 </div>
               )}

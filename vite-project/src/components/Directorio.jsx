@@ -4,7 +4,8 @@ import { socket } from '../services/socket'
 import { useReveal } from '../hooks/useReveal'
 import { useAuth } from '../context/AuthContext'
 
-  const CULTORES_POR_PAGINA = 3
+  const CULTORES_POR_PAGINA_ESCRITORIO = 3
+  const CULTORES_POR_PAGINA_MOVIL = 1
 
 function Directorio({ onSelectCultor, onOpenLogin }) {
   const { ref, isVisible } = useReveal(0)
@@ -15,6 +16,13 @@ function Directorio({ onSelectCultor, onOpenLogin }) {
   const [isLoading, setIsLoading] = useState(true)
   const [paginaActual, setPaginaActual] = useState(1)
   const [pausado, setPausado] = useState(false)
+  const [esMobile, setEsMobile] = useState(() => window.innerWidth < 768)
+
+  useEffect(() => {
+    const onResize = () => setEsMobile(window.innerWidth < 768)
+    window.addEventListener('resize', onResize)
+    return () => window.removeEventListener('resize', onResize)
+  }, [])
 
   useEffect(() => {
     let cancelled = false
@@ -62,10 +70,11 @@ function Directorio({ onSelectCultor, onOpenLogin }) {
     return coincideTexto && coincideCategoria
   })
 
-  const totalPaginas = Math.max(1, Math.ceil(cultoresFiltrados.length / CULTORES_POR_PAGINA))
+  const cultoresPorPagina = esMobile ? CULTORES_POR_PAGINA_MOVIL : CULTORES_POR_PAGINA_ESCRITORIO
+  const totalPaginas = Math.max(1, Math.ceil(cultoresFiltrados.length / cultoresPorPagina))
   const cultoresVisibles = cultoresFiltrados.slice(
-    (paginaActual - 1) * CULTORES_POR_PAGINA,
-    paginaActual * CULTORES_POR_PAGINA
+    (paginaActual - 1) * cultoresPorPagina,
+    paginaActual * cultoresPorPagina
   )
 
   const irAPagina = (pagina) => {

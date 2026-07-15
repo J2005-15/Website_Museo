@@ -91,6 +91,29 @@ export async function subirDocumentosSoporteRequest(idCultor, archivos) {
   }
 }
 
+export async function getMisDocumentosRequest(token) {
+  try {
+    const response = await axios.get(`${API_URL}/documentos_cultor/mis-documentos`, {
+      headers: { Authorization: `Bearer ${token}` }
+    })
+    return response.data
+  } catch (error) {
+    const errorMsg = error.response?.data?.error || error.response?.data?.message || 'Error al obtener documentos'
+    throw new Error(errorMsg, { cause: error })
+  }
+}
+
+export async function eliminarDocumentoRequest(idDocumento, token) {
+  try {
+    await axios.delete(`${API_URL}/documentos_cultor/mis-documentos/${idDocumento}`, {
+      headers: { Authorization: `Bearer ${token}` }
+    })
+  } catch (error) {
+    const errorMsg = error.response?.data?.error || error.response?.data?.message || 'Error al eliminar documento'
+    throw new Error(errorMsg, { cause: error })
+  }
+}
+
 // Notificaciones reales del cultor logueado (GET /api/notificaciones, requireAuth).
 export async function getNotificacionesRequest(token) {
   try {
