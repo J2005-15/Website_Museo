@@ -15,12 +15,17 @@ export function useReveal(threshold = 0.1) {
           observer.unobserve(currentRef);
         }
       },
-      { threshold }
+      { threshold, rootMargin: '200px' }
     );
 
     observer.observe(currentRef);
 
+    const fallback = setTimeout(() => {
+      setIsVisible(true);
+    }, 1500);
+
     return () => {
+      clearTimeout(fallback);
       if (currentRef) observer.unobserve(currentRef);
     };
   }, [threshold]);

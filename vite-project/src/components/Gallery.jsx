@@ -8,7 +8,7 @@ function Gallery() {
   const [obras, setObras] = useState([])
   const [categorias, setCategorias] = useState(['Todas'])
   const [filtro, setFiltro] = useState('Todas')
-  const { ref, isVisible } = useReveal(0.2)
+  const { ref, isVisible } = useReveal(0.01)
 
   const fetchObras = async () => {
     try {
