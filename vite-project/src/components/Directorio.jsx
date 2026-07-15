@@ -4,7 +4,7 @@ import { socket } from '../services/socket'
 import { useReveal } from '../hooks/useReveal'
 import { useAuth } from '../context/AuthContext'
 
-const CULTORES_POR_PAGINA = 3
+  const CULTORES_POR_PAGINA = 3
 
 function Directorio({ onSelectCultor, onOpenLogin }) {
   const { ref, isVisible } = useReveal(0)
@@ -44,7 +44,6 @@ function Directorio({ onSelectCultor, onOpenLogin }) {
     ...Array.from(new Set(cultores.map((c) => c.oficio).filter(Boolean))),
   ]
 
-  // Reiniciar paginación al cambiar filtros
   useEffect(() => {
     setPaginaActual(1)
   }, [searchTerm, filtroCategoria])
@@ -71,20 +70,15 @@ function Directorio({ onSelectCultor, onOpenLogin }) {
 
   const irAPagina = (pagina) => {
     setPaginaActual(pagina)
-    document.getElementById('directorio')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
   }
 
-  // Avance automático tipo carrusel: cada 3.5s pasa al siguiente grupo de cultores y
-  // vuelve al inicio al llegar al final. Se pausa mientras el usuario tiene el mouse
-  // encima, y el temporizador se reinicia con cada cambio de página (manual o
-  // automático) para que siempre haya el mismo respiro entre transiciones.
   useEffect(() => {
-    if (totalPaginas <= 1 || pausado) return
+    if (pausado) return
     const intervalo = setInterval(() => {
       setPaginaActual((prev) => (prev >= totalPaginas ? 1 : prev + 1))
     }, 3500)
     return () => clearInterval(intervalo)
-  }, [totalPaginas, pausado, paginaActual])
+  }, [totalPaginas, pausado])
 
   return (
     <section id="directorio" ref={ref} className="relative scroll-mt-20 bg-linen py-20 lg:py-32 overflow-hidden border-t border-cafe-noir/10">
@@ -103,7 +97,6 @@ function Directorio({ onSelectCultor, onOpenLogin }) {
           </p>
         </div>
 
-        {/* Buscador */}
         <div className="max-w-2xl mx-auto mb-16 relative">
           <div className="relative flex items-center w-full h-14 rounded-full bg-white shadow-sm border border-cafe-noir/10 focus-within:ring-2 focus-within:ring-tertiary/50 focus-within:border-tertiary transition-all">
             <div className="pl-6 pr-4 text-cafe-noir/40">
@@ -141,7 +134,7 @@ function Directorio({ onSelectCultor, onOpenLogin }) {
         </div>
 
         {isLoading ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
             {[1, 2, 3].map((i) => (
               <div key={i} className="flex flex-col rounded-2xl bg-white shadow-lg overflow-hidden animate-pulse">
                 <div className="aspect-[4/3] w-full bg-cafe-noir/5" />
@@ -163,27 +156,38 @@ function Directorio({ onSelectCultor, onOpenLogin }) {
             .directorio-carrusel-track {
               animation: directorioFade 0.5s ease;
             }
+            @media (max-width: 767px) {
+              .directorio-carrusel-track > *:nth-child(n+2) {
+                display: none;
+              }
+              .directorio-carrusel-track > * .h-\\[32rem\\] {
+                height: 20rem;
+              }
+              .directorio-carrusel-track > * .p-6 {
+                padding: 1rem;
+              }
+              .directorio-carrusel-track > * .text-2xl {
+                font-size: 1.125rem;
+              }
+            }
           `}</style>
           <div
             className="flex items-center gap-2 sm:gap-4 lg:gap-6"
             onMouseEnter={() => setPausado(true)}
             onMouseLeave={() => setPausado(false)}
           >
-            {totalPaginas > 1 && (
               <button
                 type="button"
-                onClick={() => irAPagina(Math.max(1, paginaActual - 1))}
-                disabled={paginaActual === 1}
+                onClick={() => irAPagina(paginaActual <= 1 ? totalPaginas : paginaActual - 1)}
                 aria-label="Cultores anteriores"
-                className="flex h-12 w-12 shrink-0 items-center justify-center self-center rounded-full border border-cafe-noir/10 bg-white text-cafe-noir shadow-xl transition-all hover:bg-tertiary hover:text-white hover:scale-105 disabled:pointer-events-none disabled:opacity-30 lg:h-14 lg:w-14"
+                className="flex h-12 w-12 shrink-0 items-center justify-center self-center rounded-full border border-cafe-noir/10 bg-white text-cafe-noir shadow-xl transition-all hover:bg-tertiary hover:text-white hover:scale-105 lg:h-14 lg:w-14"
               >
                 <svg className="h-5 w-5 lg:h-6 lg:w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
                 </svg>
               </button>
-            )}
 
-          <div key={paginaActual} className="directorio-carrusel-track grid min-w-0 flex-1 grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-3">
+          <div key={paginaActual} className="directorio-carrusel-track grid min-w-0 flex-1 grid-cols-1 gap-8 md:grid-cols-2 lg:grid-cols-3">
             {cultoresVisibles.map((cultor) => (
               <div key={cultor.id} className="group flex flex-col relative overflow-hidden rounded-2xl bg-white shadow-lg transition-transform hover:-translate-y-1 hover:shadow-xl">
                 {cultor.rol && (
@@ -226,10 +230,6 @@ function Directorio({ onSelectCultor, onOpenLogin }) {
                       )}
                     </div>
 
-                    {/* Contacto: visible para cualquier visitante (sin necesidad de iniciar
-                        sesión) — solo aparece si el propio cultor activó mostrarlo
-                        públicamente (mostrar_contacto_publico); si no, el backend ya
-                        manda estos campos en null. */}
                     {(cultor.telefono_contacto || cultor.correo_contacto) && (
                       <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 font-sans text-xs">
                         {cultor.telefono_contacto && (
@@ -278,19 +278,16 @@ function Directorio({ onSelectCultor, onOpenLogin }) {
             ))}
           </div>
 
-            {totalPaginas > 1 && (
               <button
                 type="button"
-                onClick={() => irAPagina(Math.min(totalPaginas, paginaActual + 1))}
-                disabled={paginaActual === totalPaginas}
+                onClick={() => irAPagina(paginaActual >= totalPaginas ? 1 : paginaActual + 1)}
                 aria-label="Más cultores"
-                className="flex h-12 w-12 shrink-0 items-center justify-center self-center rounded-full border border-cafe-noir/10 bg-white text-cafe-noir shadow-xl transition-all hover:bg-tertiary hover:text-white hover:scale-105 disabled:pointer-events-none disabled:opacity-30 lg:h-14 lg:w-14"
+                className="flex h-12 w-12 shrink-0 items-center justify-center self-center rounded-full border border-cafe-noir/10 bg-white text-cafe-noir shadow-xl transition-all hover:bg-tertiary hover:text-white hover:scale-105 lg:h-14 lg:w-14"
               >
                 <svg className="h-5 w-5 lg:h-6 lg:w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                 </svg>
               </button>
-            )}
           </div>
           </>
         ) : (

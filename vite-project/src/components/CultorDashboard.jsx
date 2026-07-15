@@ -309,7 +309,7 @@ function CultorDashboard({ isOpen, onClose, onOpenUpload, initialTab }) {
 .custom-scrollbar::-webkit-scrollbar-thumb{border-radius:9999px;background:rgba(68,50,35,0.2)}
 .custom-scrollbar::-webkit-scrollbar-thumb:hover{background:rgba(68,50,35,0.4)}
       `}</style>
-      <div className="relative w-full max-w-4xl lg:max-w-7xl h-auto max-h-[90vh] sm:max-h-none lg:min-h-[85vh] lg:max-h-[92vh] rounded-[2rem] bg-[#F4F0E6] shadow-2xl shadow-black/50 flex flex-col overflow-hidden">
+      <div className="relative w-full max-w-4xl lg:max-w-7xl h-auto max-h-[90vh] lg:min-h-[85vh] lg:max-h-[92vh] rounded-[2rem] bg-[#F4F0E6] shadow-2xl shadow-black/50 flex flex-col overflow-hidden">
 
         {/* Cabecera editorial: tapa compacta del panel, mismo ancho y curva que la tarjeta */}
         <div className="relative w-full shrink-0 rounded-t-[2rem] bg-dark-umber px-6 py-4 sm:px-10 sm:py-5 lg:px-12 lg:py-5 text-center">

@@ -1,6 +1,5 @@
 import { useMemo, useState, useEffect } from 'react'
 import { useReveal } from '../hooks/useReveal'
-import { useAuth } from '../context/AuthContext'
 import ObraCard from './ObraCard'
 import { getGaleriaPublicaRequest } from '../services/api'
 import { socket } from '../services/socket'
@@ -10,7 +9,6 @@ function Gallery() {
   const [categorias, setCategorias] = useState(['Todas'])
   const [filtro, setFiltro] = useState('Todas')
   const { ref, isVisible } = useReveal(0.2)
-  const { user } = useAuth()
 
   const fetchObras = async () => {
     try {
@@ -48,10 +46,6 @@ function Gallery() {
       socket.off('admin:update', fetchObras)
     }
   }, [])
-
-  // La colección pública solo es para visitantes; un cultor con sesión activa
-  // ya gestiona sus obras desde su panel, no desde esta sección.
-  if (user) return null
 
   return (
     <section
