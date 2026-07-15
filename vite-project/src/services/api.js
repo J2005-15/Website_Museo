@@ -2,6 +2,23 @@ import axios from 'axios'
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api'
 
+let redirigiendoAlogin = false
+axios.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    const status = error.response?.status
+    if (status === 401 || status === 403) {
+      const tokenEnRequest = error.config?.headers?.Authorization
+      if (tokenEnRequest && !redirigiendoAlogin) {
+        redirigiendoAlogin = true
+        localStorage.removeItem('cultor_sesion')
+        window.location.href = '/'
+      }
+    }
+    return Promise.reject(error)
+  }
+)
+
 // Listado público de cultores activos para el directorio (sin auth).
 export async function getCultoresPublicosRequest() {
   try {
